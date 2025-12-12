@@ -16,15 +16,19 @@ export class AuthService {
    */
   static async register(params: {
     username: string;
-    email: string;
+    email?: string;
     password: string;
     cfApiToken: string;
     cfAccountId?: string;
   }) {
     // 检查用户名是否已存在
+    const orConditions: Array<{ username?: string; email?: string }> = [{ username: params.username }];
+    if (params.email) {
+      orConditions.push({ email: params.email });
+    }
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ username: params.username }, { email: params.email }],
+        OR: orConditions,
       },
     });
 
@@ -49,11 +53,11 @@ export class AuthService {
     const user = await prisma.user.create({
       data: {
         username: params.username,
-        email: params.email,
+        ...(params.email ? { email: params.email } : {}),
         password: hashedPassword,
         cfApiToken: encryptedToken,
         cfAccountId: params.cfAccountId,
-      },
+      } as any,
       select: {
         id: true,
         username: true,

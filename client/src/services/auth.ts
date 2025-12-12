@@ -6,10 +6,9 @@ import { ApiResponse, LoginResponse, User } from '@/types';
  */
 export const register = async (params: {
   username: string;
-  email: string;
+  email?: string;
   password: string;
   cfApiToken: string;
-  cfAccountId?: string;
 }): Promise<ApiResponse<{ user: User }>> => {
   return api.post('/auth/register', params);
 };

@@ -4,7 +4,7 @@
 export interface User {
   id: number;
   username: string;
-  email: string;
+  email?: string | null;
   cfAccountId?: string;
   createdAt: string;
   updatedAt: string;

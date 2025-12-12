@@ -14,7 +14,7 @@ datasource db {
 model User {
   id           Int      @id @default(autoincrement())
   username     String   @unique
-  email        String   @unique
+  email        String?  @unique
   password     String   // bcrypt 加密
   cfApiToken   String   // Cloudflare API Token (AES-256 加密)
   cfAccountId  String?  // Cloudflare Account ID (可选)

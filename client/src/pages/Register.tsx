@@ -24,11 +24,10 @@ import { isValidEmail, isStrongPassword } from '@/utils/validators';
 
 interface RegisterForm {
   username: string;
-  email: string;
+  email?: string;
   password: string;
   confirmPassword: string;
   cfApiToken: string;
-  cfAccountId?: string;
 }
 
 /**
@@ -61,7 +60,6 @@ export default function Register() {
         email: data.email,
         password: data.password,
         cfApiToken: data.cfApiToken,
-        cfAccountId: data.cfAccountId,
       });
 
       alert('注册成功！请登录');
@@ -182,8 +180,8 @@ export default function Register() {
                   label="邮箱"
                   type="email"
                   {...register('email', {
-                    required: '请输入邮箱',
-                    validate: (value) => isValidEmail(value) || '请输入有效的邮箱地址',
+                    validate: (value) =>
+                      !value || isValidEmail(value) || '请输入有效的邮箱地址',
                   })}
                   error={!!errors.email}
                   helperText={errors.email?.message}
@@ -255,13 +253,6 @@ export default function Register() {
                 error={!!errors.cfApiToken}
                 helperText={errors.cfApiToken?.message}
                 placeholder="在 Profile > API Tokens 中获取"
-              />
-
-              <TextField
-                fullWidth
-                label="Cloudflare Account ID（可选）"
-                {...register('cfAccountId')}
-                helperText="如果您是团队/企业账户可能需要此项"
               />
 
               <Button
