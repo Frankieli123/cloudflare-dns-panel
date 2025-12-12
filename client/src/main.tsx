@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { zhCN } from '@mui/material/locale';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import App from './App';
+import theme from './theme';
 
 // 创建 React Query 客户端
 const queryClient = new QueryClient({
@@ -16,22 +16,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// 创建 Material-UI 主题（中文）
-const theme = createTheme(
-  {
-    palette: {
-      mode: 'light',
-      primary: {
-        main: '#1976d2',
-      },
-      secondary: {
-        main: '#dc004e',
-      },
-    },
-  },
-  zhCN
-);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

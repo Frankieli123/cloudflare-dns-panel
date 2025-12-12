@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Container,
   Box,
-  Paper,
   Typography,
   TextField,
   Button,
   Link,
   Alert,
+  Stack,
+  useTheme,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
+import { 
+  CloudQueue as CloudIcon, 
+  Visibility, 
+  VisibilityOff,
+  Login as LoginIcon 
+} from '@mui/icons-material';
 import { login, saveAuthData } from '@/services/auth';
 
 interface LoginForm {
@@ -23,8 +31,10 @@ interface LoginForm {
  */
 export default function Login() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -49,71 +59,172 @@ export default function Login() {
   };
 
   return (
-    <Container maxWidth="sm">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        bgcolor: 'background.default',
+      }}
+    >
+      {/* 左侧装饰区域 - 桌面端显示 */}
       <Box
         sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
+          flex: 1,
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
           justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative',
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: 'white',
+          p: 6,
+          overflow: 'hidden',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            Cloudflare DNS 管理
+        {/* 背景装饰圆 */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -100,
+            left: -100,
+            width: 400,
+            height: 400,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: -50,
+            right: -50,
+            width: 300,
+            height: 300,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 480, textAlign: 'center' }}>
+          <CloudIcon sx={{ fontSize: 80, mb: 4, opacity: 0.9 }} />
+          <Typography variant="h3" fontWeight="bold" gutterBottom>
+            专业的 DNS 管理平台
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            登录您的账户
+          <Typography variant="h6" sx={{ opacity: 0.7, fontWeight: 'normal', mt: 2, lineHeight: 1.6 }}>
+            简单、高效、安全地管理您的 Cloudflare 域名解析记录和自定义主机名。
           </Typography>
+        </Box>
+      </Box>
+
+      {/* 右侧登录表单区域 */}
+      <Box
+        sx={{
+          flex: { xs: '1 1 auto', md: '0 0 500px' },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          p: { xs: 3, sm: 6, md: 8 },
+          bgcolor: 'background.paper',
+        }}
+      >
+        <Box sx={{ maxWidth: 400, mx: 'auto', width: '100%' }}>
+          {/* 移动端 Logo */}
+          <Box sx={{ display: { md: 'none' }, mb: 4, textAlign: 'center' }}>
+            <CloudIcon sx={{ fontSize: 48, color: 'primary.main' }} />
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">
+              欢迎回来
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              请输入您的账户信息以继续
+            </Typography>
+          </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
               {error}
             </Alert>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)}>
-            <TextField
-              fullWidth
-              label="用户名或邮箱"
-              margin="normal"
-              {...register('username', { required: '请输入用户名或邮箱' })}
-              error={!!errors.username}
-              helperText={errors.username?.message}
-            />
+            <Stack spacing={2.5}>
+              <TextField
+                fullWidth
+                label="用户名或邮箱"
+                {...register('username', { required: '请输入用户名或邮箱' })}
+                error={!!errors.username}
+                helperText={errors.username?.message}
+                InputProps={{
+                  sx: { height: 50 }
+                }}
+              />
 
-            <TextField
-              fullWidth
-              type="password"
-              label="密码"
-              margin="normal"
-              {...register('password', { required: '请输入密码' })}
-              error={!!errors.password}
-              helperText={errors.password?.message}
-            />
+              <TextField
+                fullWidth
+                type={showPassword ? 'text' : 'password'}
+                label="密码"
+                {...register('password', { required: '请输入密码' })}
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                InputProps={{
+                  sx: { height: 50 },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={loading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {loading ? '登录中...' : '登录'}
-            </Button>
+              <Button
+                fullWidth
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={loading}
+                startIcon={!loading && <LoginIcon />}
+                sx={{ 
+                  mt: 2, 
+                  height: 48,
+                  fontSize: '1rem',
+                  fontWeight: 600
+                }}
+              >
+                {loading ? '登录中...' : '立即登录'}
+              </Button>
+            </Stack>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2">
+            <Box sx={{ mt: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
                 还没有账户？{' '}
-                <Link component={RouterLink} to="/register">
-                  立即注册
+                <Link 
+                  component={RouterLink} 
+                  to="/register" 
+                  underline="hover" 
+                  fontWeight="600"
+                  color="primary.main"
+                >
+                  免费注册
                 </Link>
               </Typography>
             </Box>
           </form>
-        </Paper>
+        </Box>
+        
+        {/* 底部版权信息 */}
+        <Box sx={{ mt: 8, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary">
+            &copy; {new Date().getFullYear()} CF Panel. All rights reserved.
+          </Typography>
+        </Box>
       </Box>
-    </Container>
+    </Box>
   );
 }

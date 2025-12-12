@@ -84,10 +84,21 @@ export interface Log {
 export interface CustomHostname {
   id: string;
   hostname: string;
+  status?: string;
   ssl: {
     status: string;
     method: string;
     type: string;
+    validation_records?: {
+      txt_name?: string;
+      txt_value?: string;
+    }[];
+    validation_errors?: any[];
+  };
+  ownership_verification?: {
+    type: string;
+    name: string;
+    value: string;
   };
   created_at: string;
 }

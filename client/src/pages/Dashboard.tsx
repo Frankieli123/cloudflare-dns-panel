@@ -1,10 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, Fragment } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Typography,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -17,19 +15,38 @@ import {
   Alert,
   TextField,
   InputAdornment,
+  Card,
+  CardContent,
+  Stack,
+  IconButton,
+  Collapse,
 } from '@mui/material';
-import { Search as SearchIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { 
+  Search as SearchIcon, 
+  Refresh as RefreshIcon,
+  Dns as DnsIcon,
+  CheckCircle as ActiveIcon,
+  Pending as PendingIcon,
+  Error as ErrorIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon
+} from '@mui/icons-material';
 import { getDomains, refreshDomains } from '@/services/domains';
 import { formatRelativeTime } from '@/utils/formatters';
+import { getStoredUser } from '@/services/auth';
+import { alpha } from '@mui/material/styles';
+import { Domain } from '@/types';
+import DnsManagement from '@/components/DnsManagement/DnsManagement';
 
 /**
  * 仪表盘页面 - 域名列表
  */
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedDomainId, setExpandedDomainId] = useState<string | null>(null);
+  const user = getStoredUser();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['domains'],
     queryFn: getDomains,
   });
@@ -39,38 +56,29 @@ export default function Dashboard() {
     refetch();
   };
 
-  const domains = data?.data?.domains || [];
+  const domains: Domain[] = data?.data?.domains || [];
   const filteredDomains = domains.filter((domain) =>
     domain.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
+  const activeCount = domains.filter(d => d.status === 'active').length;
 
-  const getStatusText = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case 'active':
-        return '激活';
+        return { label: '已激活', color: 'success' as const, icon: <ActiveIcon fontSize="small" /> };
       case 'pending':
-        return '待验证';
+        return { label: '待验证', color: 'warning' as const, icon: <PendingIcon fontSize="small" /> };
       case 'moved':
-        return '已移动';
+        return { label: '已迁出', color: 'error' as const, icon: <ErrorIcon fontSize="small" /> };
       default:
-        return status;
+        return { label: status, color: 'default' as const, icon: null };
     }
   };
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -78,93 +86,146 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        {error as string}
+      <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+        无法加载域名列表: {(error as any)?.message || String(error)}
       </Alert>
     );
   }
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          域名列表
+      {/* 页面头部 */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+          欢迎回来, {user?.username} 👋
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-        >
-          刷新
-        </Button>
+        <Typography variant="body1" color="text.secondary">
+          您当前共有 <strong>{domains.length}</strong> 个域名，其中 <strong>{activeCount}</strong> 个正在运行。
+        </Typography>
       </Box>
 
-      <Paper sx={{ mb: 3, p: 2 }}>
-        <TextField
-          fullWidth
-          placeholder="搜索域名..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Paper>
+      <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+        <CardContent sx={{ p: 3 }}>
+          {/* 工具栏 */}
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={2} 
+            justifyContent="space-between" 
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            sx={{ mb: 3 }}
+          >
+            <TextField
+              placeholder="搜索域名..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ width: { xs: '100%', sm: 300 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={isRefetching}
+              sx={{ borderColor: 'divider', color: 'text.secondary', '&:hover': { borderColor: 'primary.main', color: 'primary.main' } }}
+            >
+              {isRefetching ? '刷新中...' : '同步列表'}
+            </Button>
+          </Stack>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>域名</TableCell>
-              <TableCell>状态</TableCell>
-              <TableCell>最后更新</TableCell>
-              <TableCell align="right">操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredDomains.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  {searchTerm ? '未找到匹配的域名' : '暂无域名'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredDomains.map((domain) => (
-                <TableRow key={domain.id} hover>
-                  <TableCell>
-                    <Typography variant="body1" fontWeight="medium">
-                      {domain.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusText(domain.status)}
-                      color={getStatusColor(domain.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {domain.updatedAt ? formatRelativeTime(domain.updatedAt) : '-'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => navigate(`/domain/${domain.id}`)}
-                    >
-                      管理 DNS
-                    </Button>
-                  </TableCell>
+          {/* 表格 */}
+          <TableContainer>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell width={50} />
+                  <TableCell>域名</TableCell>
+                  <TableCell>状态</TableCell>
+                  <TableCell>最后更新</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredDomains.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'text.secondary' }}>
+                        <DnsIcon sx={{ fontSize: 48, mb: 1, opacity: 0.2 }} />
+                        <Typography variant="body1">
+                          {searchTerm ? '没有找到匹配的域名' : '暂无域名数据'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDomains.map((domain) => {
+                    const status = getStatusConfig(domain.status);
+                    const isExpanded = expandedDomainId === domain.id;
+
+                    return (
+                      <Fragment key={domain.id}>
+                        <TableRow
+                          hover
+                          sx={{ '& > *': { borderBottom: 'unset' }, cursor: 'pointer' }}
+                          onClick={() => setExpandedDomainId(isExpanded ? null : domain.id)}
+                        >
+                          <TableCell>
+                            <IconButton
+                              aria-label="expand row"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedDomainId(isExpanded ? null : domain.id);
+                              }}
+                            >
+                              {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                            </IconButton>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body1" fontWeight="600" color="text.primary">
+                              {domain.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              icon={status.icon || undefined}
+                              label={status.label}
+                              // @ts-ignore
+                              color={status.color === 'default' ? 'default' : status.color}
+                              size="small"
+                              sx={{ 
+                                bgcolor: (theme) => status.color !== 'default' ? alpha(theme.palette[status.color as 'success' | 'warning' | 'error'].main, 0.1) : undefined,
+                                color: (theme) => status.color !== 'default' ? theme.palette[status.color as 'success' | 'warning' | 'error'].dark : undefined,
+                                fontWeight: 600,
+                                border: 'none',
+                                '& .MuiChip-icon': { color: 'inherit' }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ color: 'text.secondary' }}>
+                            {domain.updatedAt ? formatRelativeTime(domain.updatedAt) : '-'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell style={{ padding: 0 }} colSpan={4}>
+                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                              <DnsManagement zoneId={domain.id} />
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   );
 }

@@ -199,7 +199,7 @@ export class CloudflareService {
         zone_id: zoneId,
         hostname,
         ssl: { method: 'http', type: 'dv' },
-      } as any);
+      });
 
       return response;
     } catch (error: any) {
@@ -215,6 +215,36 @@ export class CloudflareService {
       await this.client.customHostnames.delete(hostnameId, { zone_id: zoneId });
     } catch (error: any) {
       throw new Error(`删除自定义主机名失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取自定义主机名回退源
+   */
+  async getFallbackOrigin(zoneId: string): Promise<string> {
+    try {
+      // @ts-ignore
+      const response = await this.client.customHostnames.fallbackOrigin.get({ zone_id: zoneId });
+      return response.origin || '';
+    } catch (error: any) {
+      // 某些情况下未设置返回空或404，视具体 API 表现而定
+      return '';
+    }
+  }
+
+  /**
+   * 更新自定义主机名回退源
+   */
+  async updateFallbackOrigin(zoneId: string, origin: string): Promise<string> {
+    try {
+      // @ts-ignore
+      const response = await this.client.customHostnames.fallbackOrigin.update({
+        zone_id: zoneId,
+        origin
+      });
+      return response.origin;
+    } catch (error: any) {
+      throw new Error(`更新回退源失败: ${error.message}`);
     }
   }
 

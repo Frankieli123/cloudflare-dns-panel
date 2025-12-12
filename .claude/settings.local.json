@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npx prisma generate:*)",
-      "Bash(npx prisma migrate:*)"
+      "Bash(npx prisma migrate:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 67880 -Force\")",
+      "Bash(dir /s /b node_modulescloudflare*.d.ts)"
     ]
   }
 }

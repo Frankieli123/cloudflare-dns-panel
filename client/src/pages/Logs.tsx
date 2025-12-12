@@ -66,7 +66,7 @@ export default function Logs() {
   if (error) {
     return (
       <Alert severity="error" sx={{ mt: 2 }}>
-        {error as string}
+        {(error as any)?.message || String(error)}
       </Alert>
     );
   }

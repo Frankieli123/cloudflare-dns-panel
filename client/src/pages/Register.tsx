@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Container,
   Box,
-  Paper,
   Typography,
   TextField,
   Button,
   Link,
   Alert,
+  Stack,
+  useTheme,
+  InputAdornment,
+  IconButton,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
+import { 
+  CloudQueue as CloudIcon, 
+  Visibility, 
+  VisibilityOff,
+  PersonAdd as PersonAddIcon 
+} from '@mui/icons-material';
 import { register as registerUser } from '@/services/auth';
 import { isValidEmail, isStrongPassword } from '@/utils/validators';
 
@@ -28,8 +36,11 @@ interface RegisterForm {
  */
 export default function Register() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -63,121 +74,231 @@ export default function Register() {
   };
 
   return (
-    <Container maxWidth="sm">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        bgcolor: 'background.default',
+      }}
+    >
+      {/* 左侧装饰区域 - 桌面端显示 */}
       <Box
         sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
+          flex: 1,
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
           justifyContent: 'center',
-          py: 4,
+          alignItems: 'center',
+          position: 'relative',
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: 'white',
+          p: 6,
+          overflow: 'hidden',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            注册账户
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -100,
+            right: -100,
+            width: 400,
+            height: 400,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: -50,
+            left: -50,
+            width: 300,
+            height: 300,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 480, textAlign: 'center' }}>
+          <CloudIcon sx={{ fontSize: 80, mb: 4, opacity: 0.9 }} />
+          <Typography variant="h3" fontWeight="bold" gutterBottom>
+            开始您的体验
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            创建您的 Cloudflare DNS 管理账户
+          <Typography variant="h6" sx={{ opacity: 0.7, fontWeight: 'normal', mt: 2, lineHeight: 1.6 }}>
+            只需几步即可配置您的 DNS 管理控制台，集成 Cloudflare API，享受极速管理体验。
           </Typography>
+        </Box>
+      </Box>
+
+      {/* 右侧注册表单区域 */}
+      <Box
+        sx={{
+          flex: { xs: '1 1 auto', md: '0 0 600px' }, // 稍微宽一点
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          p: { xs: 3, sm: 6, md: 8 },
+          bgcolor: 'background.paper',
+          overflowY: 'auto', // 允许内容过多时滚动
+          height: '100vh',
+        }}
+      >
+        <Box sx={{ maxWidth: 460, mx: 'auto', width: '100%', py: 4 }}>
+           {/* 移动端 Logo */}
+           <Box sx={{ display: { md: 'none' }, mb: 3, textAlign: 'center' }}>
+            <CloudIcon sx={{ fontSize: 48, color: 'primary.main' }} />
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">
+              创建新账户
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              请填写以下信息以完成注册
+            </Typography>
+          </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
               {error}
             </Alert>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)}>
-            <TextField
-              fullWidth
-              label="用户名"
-              margin="normal"
-              {...register('username', {
-                required: '请输入用户名',
-                minLength: { value: 3, message: '用户名至少 3 个字符' },
-              })}
-              error={!!errors.username}
-              helperText={errors.username?.message}
-            />
+            <Stack spacing={2}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="用户名"
+                  {...register('username', {
+                    required: '请输入用户名',
+                    minLength: { value: 3, message: '用户名至少 3 个字符' },
+                  })}
+                  error={!!errors.username}
+                  helperText={errors.username?.message}
+                />
+                <TextField
+                  fullWidth
+                  label="邮箱"
+                  type="email"
+                  {...register('email', {
+                    required: '请输入邮箱',
+                    validate: (value) => isValidEmail(value) || '请输入有效的邮箱地址',
+                  })}
+                  error={!!errors.email}
+                  helperText={errors.email?.message}
+                />
+              </Box>
 
-            <TextField
-              fullWidth
-              label="邮箱"
-              type="email"
-              margin="normal"
-              {...register('email', {
-                required: '请输入邮箱',
-                validate: (value) => isValidEmail(value) || '请输入有效的邮箱地址',
-              })}
-              error={!!errors.email}
-              helperText={errors.email?.message}
-            />
+              <TextField
+                fullWidth
+                type={showPassword ? 'text' : 'password'}
+                label="密码"
+                {...register('password', {
+                  required: '请输入密码',
+                  validate: (value) =>
+                    isStrongPassword(value) || '密码至少 8 位，包含大小写字母和数字',
+                })}
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <TextField
-              fullWidth
-              type="password"
-              label="密码"
-              margin="normal"
-              {...register('password', {
-                required: '请输入密码',
-                validate: (value) =>
-                  isStrongPassword(value) || '密码至少 8 位，包含大小写字母和数字',
-              })}
-              error={!!errors.password}
-              helperText={errors.password?.message}
-            />
+              <TextField
+                fullWidth
+                type={showConfirmPassword ? 'text' : 'password'}
+                label="确认密码"
+                {...register('confirmPassword', {
+                  required: '请确认密码',
+                  validate: (value) => value === password || '两次密码输入不一致',
+                })}
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword?.message}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-            <TextField
-              fullWidth
-              type="password"
-              label="确认密码"
-              margin="normal"
-              {...register('confirmPassword', {
-                required: '请确认密码',
-                validate: (value) => value === password || '两次密码输入不一致',
-              })}
-              error={!!errors.confirmPassword}
-              helperText={errors.confirmPassword?.message}
-            />
+              <Box sx={{ my: 1 }}>
+                <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 1 }}>
+                  Cloudflare 配置
+                </Typography>
+                <Typography variant="caption" color="text.secondary" paragraph>
+                  我们需要您的 API Token 来管理您的 DNS 记录。这仅用于与 Cloudflare 通信。
+                </Typography>
+              </Box>
 
-            <TextField
-              fullWidth
-              label="Cloudflare API Token"
-              margin="normal"
-              {...register('cfApiToken', { required: '请输入 Cloudflare API Token' })}
-              error={!!errors.cfApiToken}
-              helperText={errors.cfApiToken?.message || '在 Cloudflare 控制台获取 API Token'}
-            />
+              <TextField
+                fullWidth
+                label="Cloudflare API Token"
+                {...register('cfApiToken', { required: '请输入 Cloudflare API Token' })}
+                error={!!errors.cfApiToken}
+                helperText={errors.cfApiToken?.message}
+                placeholder="在 Profile > API Tokens 中获取"
+              />
 
-            <TextField
-              fullWidth
-              label="Cloudflare Account ID（可选）"
-              margin="normal"
-              {...register('cfAccountId')}
-            />
+              <TextField
+                fullWidth
+                label="Cloudflare Account ID（可选）"
+                {...register('cfAccountId')}
+                helperText="如果您是团队/企业账户可能需要此项"
+              />
 
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={loading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {loading ? '注册中...' : '注册'}
-            </Button>
+              <Button
+                fullWidth
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={loading}
+                startIcon={!loading && <PersonAddIcon />}
+                sx={{ 
+                  mt: 2, 
+                  height: 48,
+                  fontSize: '1rem',
+                  fontWeight: 600
+                }}
+              >
+                {loading ? '注册中...' : '创建账户'}
+              </Button>
+            </Stack>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2">
+            <Box sx={{ mt: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
                 已有账户？{' '}
-                <Link component={RouterLink} to="/login">
-                  立即登录
+                <Link 
+                  component={RouterLink} 
+                  to="/login"
+                  underline="hover" 
+                  fontWeight="600"
+                  color="primary.main"
+                >
+                  直接登录
                 </Link>
               </Typography>
             </Box>
           </form>
-        </Paper>
+        </Box>
       </Box>
-    </Container>
+    </Box>
   );
 }

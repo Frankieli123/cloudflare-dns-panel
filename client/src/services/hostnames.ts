@@ -29,3 +29,22 @@ export const deleteCustomHostname = async (
 ): Promise<ApiResponse> => {
   return api.delete(`/hostnames/${zoneId}/${hostnameId}`);
 };
+
+/**
+ * 获取自定义主机名回退源
+ */
+export const getFallbackOrigin = async (
+  zoneId: string
+): Promise<ApiResponse<{ origin: string }>> => {
+  return api.get(`/hostnames/${zoneId}/fallback_origin`);
+};
+
+/**
+ * 更新自定义主机名回退源
+ */
+export const updateFallbackOrigin = async (
+  zoneId: string,
+  origin: string
+): Promise<ApiResponse<{ origin: string }>> => {
+  return api.put(`/hostnames/${zoneId}/fallback_origin`, { origin });
+};

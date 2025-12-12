@@ -2,13 +2,26 @@ import { useState } from 'react';
 import {
   Box,
   Typography,
-  Paper,
+  Card,
+  CardContent,
+  CardHeader,
   TextField,
   Button,
   Alert,
   Divider,
+  Grid,
+  Stack,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
+import { 
+  Visibility, 
+  VisibilityOff,
+  Security as SecurityIcon,
+  VpnKey as KeyIcon,
+  Save as SaveIcon
+} from '@mui/icons-material';
 import { updatePassword, updateCfToken } from '@/services/auth';
 import { isStrongPassword } from '@/utils/validators';
 
@@ -31,19 +44,22 @@ export default function Settings() {
   const [tokenSuccess, setTokenSuccess] = useState('');
   const [tokenError, setTokenError] = useState('');
 
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const {
     register: registerPassword,
     handleSubmit: handlePasswordSubmit,
     watch,
     reset: resetPassword,
-    formState: { errors: passwordErrors },
+    formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
   } = useForm<PasswordForm>();
 
   const {
     register: registerToken,
     handleSubmit: handleTokenSubmit,
     reset: resetToken,
-    formState: { errors: tokenErrors },
+    formState: { errors: tokenErrors, isSubmitting: isTokenSubmitting },
   } = useForm<TokenForm>();
 
   const newPassword = watch('newPassword');
@@ -61,7 +77,7 @@ export default function Settings() {
       setPasswordSuccess('密码修改成功');
       resetPassword();
     } catch (err: any) {
-      setPasswordError(err || '密码修改失败');
+      setPasswordError((err as any)?.message || String(err) || '密码修改失败');
     }
   };
 
@@ -75,111 +91,172 @@ export default function Settings() {
       setTokenSuccess('API Token 更新成功');
       resetToken();
     } catch (err: any) {
-      setTokenError(err || 'API Token 更新失败');
+      setTokenError((err as any)?.message || String(err) || 'API Token 更新失败');
     }
   };
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        设置
-      </Typography>
-
-      {/* 修改密码 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          修改密码
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+          系统设置
         </Typography>
-        <Divider sx={{ mb: 2 }} />
-
-        {passwordSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {passwordSuccess}
-          </Alert>
-        )}
-        {passwordError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {passwordError}
-          </Alert>
-        )}
-
-        <form onSubmit={handlePasswordSubmit(onPasswordSubmit)}>
-          <TextField
-            fullWidth
-            type="password"
-            label="当前密码"
-            margin="normal"
-            {...registerPassword('oldPassword', { required: '请输入当前密码' })}
-            error={!!passwordErrors.oldPassword}
-            helperText={passwordErrors.oldPassword?.message}
-          />
-
-          <TextField
-            fullWidth
-            type="password"
-            label="新密码"
-            margin="normal"
-            {...registerPassword('newPassword', {
-              required: '请输入新密码',
-              validate: (value) =>
-                isStrongPassword(value) || '密码至少 8 位，包含大小写字母和数字',
-            })}
-            error={!!passwordErrors.newPassword}
-            helperText={passwordErrors.newPassword?.message}
-          />
-
-          <TextField
-            fullWidth
-            type="password"
-            label="确认新密码"
-            margin="normal"
-            {...registerPassword('confirmPassword', {
-              required: '请确认新密码',
-              validate: (value) => value === newPassword || '两次密码输入不一致',
-            })}
-            error={!!passwordErrors.confirmPassword}
-            helperText={passwordErrors.confirmPassword?.message}
-          />
-
-          <Button type="submit" variant="contained" sx={{ mt: 2 }}>
-            修改密码
-          </Button>
-        </form>
-      </Paper>
-
-      {/* 更新 API Token */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          更新 Cloudflare API Token
+        <Typography variant="body1" color="text.secondary">
+          管理您的账户安全和 API 配置
         </Typography>
-        <Divider sx={{ mb: 2 }} />
+      </Box>
 
-        {tokenSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {tokenSuccess}
-          </Alert>
-        )}
-        {tokenError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {tokenError}
-          </Alert>
-        )}
+      <Grid container spacing={3}>
+        {/* 修改密码 */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}>
+            <CardHeader 
+              avatar={<SecurityIcon color="primary" />}
+              title={<Typography variant="h6" fontWeight="bold">安全设置</Typography>}
+              subheader="修改您的登录密码"
+            />
+            <Divider />
+            <CardContent>
+              {passwordSuccess && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  {passwordSuccess}
+                </Alert>
+              )}
+              {passwordError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {passwordError}
+                </Alert>
+              )}
 
-        <form onSubmit={handleTokenSubmit(onTokenSubmit)}>
-          <TextField
-            fullWidth
-            label="新的 API Token"
-            margin="normal"
-            {...registerToken('cfApiToken', { required: '请输入 API Token' })}
-            error={!!tokenErrors.cfApiToken}
-            helperText={tokenErrors.cfApiToken?.message || '在 Cloudflare 控制台获取新的 API Token'}
-          />
+              <form onSubmit={handlePasswordSubmit(onPasswordSubmit)}>
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    type={showOldPassword ? 'text' : 'password'}
+                    label="当前密码"
+                    {...registerPassword('oldPassword', { required: '请输入当前密码' })}
+                    error={!!passwordErrors.oldPassword}
+                    helperText={passwordErrors.oldPassword?.message}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowOldPassword(!showOldPassword)}
+                            edge="end"
+                          >
+                            {showOldPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
 
-          <Button type="submit" variant="contained" sx={{ mt: 2 }}>
-            更新 Token
-          </Button>
-        </form>
-      </Paper>
+                  <TextField
+                    fullWidth
+                    type={showNewPassword ? 'text' : 'password'}
+                    label="新密码"
+                    {...registerPassword('newPassword', {
+                      required: '请输入新密码',
+                      validate: (value) =>
+                        isStrongPassword(value) || '密码至少 8 位，包含大小写字母和数字',
+                    })}
+                    error={!!passwordErrors.newPassword}
+                    helperText={passwordErrors.newPassword?.message}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            edge="end"
+                          >
+                            {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="确认新密码"
+                    {...registerPassword('confirmPassword', {
+                      required: '请确认新密码',
+                      validate: (value) => value === newPassword || '两次密码输入不一致',
+                    })}
+                    error={!!passwordErrors.confirmPassword}
+                    helperText={passwordErrors.confirmPassword?.message}
+                  />
+
+                  <Box sx={{ pt: 1 }}>
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      startIcon={<SaveIcon />}
+                      disabled={isPasswordSubmitting}
+                    >
+                      修改密码
+                    </Button>
+                  </Box>
+                </Stack>
+              </form>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 更新 API Token */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}>
+            <CardHeader 
+              avatar={<KeyIcon color="primary" />}
+              title={<Typography variant="h6" fontWeight="bold">API 配置</Typography>}
+              subheader="更新 Cloudflare API Token"
+            />
+            <Divider />
+            <CardContent>
+              {tokenSuccess && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  {tokenSuccess}
+                </Alert>
+              )}
+              {tokenError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {tokenError}
+                </Alert>
+              )}
+
+              <form onSubmit={handleTokenSubmit(onTokenSubmit)}>
+                <Stack spacing={3}>
+                  <Alert severity="info" sx={{ bgcolor: 'primary.50', color: 'primary.900' }}>
+                    更新 Token 不会影响现有的 DNS 记录，但如果 Token 无效，您将无法进行新的管理操作。
+                  </Alert>
+
+                  <TextField
+                    fullWidth
+                    label="新的 API Token"
+                    {...registerToken('cfApiToken', { required: '请输入 API Token' })}
+                    error={!!tokenErrors.cfApiToken}
+                    helperText={tokenErrors.cfApiToken?.message || '在 Cloudflare 控制台获取新的 API Token'}
+                    multiline
+                    rows={2}
+                  />
+
+                  <Box>
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      startIcon={<SaveIcon />}
+                      disabled={isTokenSubmitting}
+                    >
+                      更新 Token
+                    </Button>
+                  </Box>
+                </Stack>
+              </form>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

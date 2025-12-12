@@ -82,7 +82,10 @@ export default function QuickAddForm({ onSubmit, loading }: QuickAddFormProps) {
           placeholder="IP 地址或目标"
           {...register('content', {
             required: '请输入内容',
-            validate: (value) => validateDNSContent(recordType, value),
+            validate: (value) => {
+            const result = validateDNSContent(recordType, value);
+            return result === null ? true : result;
+          },
           })}
           error={!!errors.content}
           helperText={errors.content?.message}
