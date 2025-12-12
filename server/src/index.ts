@@ -1,0 +1,65 @@
+import express from 'express';
+import cors from 'cors';
+import { config, validateConfig } from './config';
+import { requestLogger } from './middleware/logger';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+
+// 导入路由
+import authRoutes from './routes/auth';
+import domainRoutes from './routes/domains';
+import dnsRoutes from './routes/dns';
+import hostnameRoutes from './routes/hostnames';
+import logRoutes from './routes/logs';
+
+// 验证配置
+validateConfig();
+
+const app = express();
+
+// 中间件
+app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
+
+// 健康检查
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API 路由
+app.use('/api/auth', authRoutes);
+app.use('/api/domains', domainRoutes);
+app.use('/api/dns', dnsRoutes);
+app.use('/api/hostnames', hostnameRoutes);
+app.use('/api/logs', logRoutes);
+
+// 错误处理
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// 启动服务器
+app.listen(config.port, () => {
+  console.log(`
+╔═══════════════════════════════════════════════════════╗
+║   Cloudflare DNS Manager API Server                  ║
+║                                                       ║
+║   环境: ${config.nodeEnv.padEnd(43)}║
+║   端口: ${config.port.toString().padEnd(43)}║
+║   CORS: ${config.corsOrigin.padEnd(43)}║
+║                                                       ║
+║   服务器已启动: http://localhost:${config.port.toString().padEnd(18)}║
+╚═══════════════════════════════════════════════════════╝
+  `);
+});
+
+// 优雅关闭
+process.on('SIGTERM', () => {
+  console.log('收到 SIGTERM 信号，正在关闭服务器...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('\n收到 SIGINT 信号，正在关闭服务器...');
+  process.exit(0);
+});

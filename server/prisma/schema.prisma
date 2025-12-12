@@ -1,0 +1,64 @@
+// Prisma Schema for Cloudflare DNS Manager
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  password     String   // bcrypt 加密
+  cfApiToken   String   // Cloudflare API Token (AES-256 加密)
+  cfAccountId  String?  // Cloudflare Account ID (可选)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 关联
+  logs         Log[]
+
+  @@map("users")
+}
+
+// 操作日志表
+model Log {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timestamp     DateTime @default(now())
+  action        String   // CREATE, UPDATE, DELETE
+  resourceType  String   // DNS, ZONE, HOSTNAME, USER
+  domain        String?
+  recordName    String?
+  recordType    String?  // A, AAAA, CNAME, MX, TXT, etc.
+  oldValue      String?  // JSON 格式
+  newValue      String?  // JSON 格式
+  status        String   // SUCCESS, FAILED
+  errorMessage  String?
+  ipAddress     String?  // 操作者 IP 地址
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+  @@index([resourceType])
+  @@index([status])
+  @@map("logs")
+}
+
+// 缓存表（可选，用于减少 API 调用）
+model Cache {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   // JSON 格式
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("cache")
+}
