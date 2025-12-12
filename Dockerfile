@@ -13,6 +13,7 @@ COPY server/package*.json ./
 COPY server/prisma ./prisma/
 RUN npm install --no-audit --no-audit --no-audit --no-audit --no-audit --no-audit
 COPY server/ .
+RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Final Runner
