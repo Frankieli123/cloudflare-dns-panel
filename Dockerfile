@@ -2,7 +2,7 @@
 FROM node:18-alpine AS client-builder
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-audit --no-audit --no-audit --no-audit --no-audit
 COPY client/ .
 RUN npm run build
 
@@ -11,7 +11,7 @@ FROM node:18-alpine AS server-builder
 WORKDIR /app/server
 COPY server/package*.json ./
 COPY server/prisma ./prisma/
-RUN npm install
+RUN npm install --no-audit --no-audit --no-audit --no-audit --no-audit --no-audit
 COPY server/ .
 RUN npm run build
 
