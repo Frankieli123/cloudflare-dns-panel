@@ -14,7 +14,8 @@
       "Bash(npx ts-node:*)",
       "Bash(powershell:*)",
       "Bash(curl:*)",
-      "Bash(dir /b /s *.config.*)"
+      "Bash(dir /b /s *.config.*)",
+      "Bash(dir:*)"
     ]
   }
 }

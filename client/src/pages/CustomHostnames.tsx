@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { getCustomHostnames, createCustomHostname, deleteCustomHostname } from '@/services/hostnames';
 import { formatDateTime } from '@/utils/formatters';
+import { useProvider } from '@/contexts/ProviderContext';
 
 /**
  * 自定义主机名管理页面
@@ -43,29 +44,36 @@ import { formatDateTime } from '@/utils/formatters';
 export default function CustomHostnames() {
   const { zoneId } = useParams<{ zoneId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [hostname, setHostname] = useState('');
 
+  const { selectedCredentialId } = useProvider();
+  const credParam = new URLSearchParams(location.search).get('credentialId');
+  const credentialId = credParam
+    ? parseInt(credParam)
+    : (typeof selectedCredentialId === 'number' ? selectedCredentialId : undefined);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['custom-hostnames', zoneId],
-    queryFn: () => getCustomHostnames(zoneId!),
+    queryKey: ['custom-hostnames', zoneId, credentialId],
+    queryFn: () => getCustomHostnames(zoneId!, credentialId),
     enabled: !!zoneId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (hostname: string) => createCustomHostname(zoneId!, hostname),
+    mutationFn: (hostname: string) => createCustomHostname(zoneId!, hostname, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId, credentialId] });
       setShowAddDialog(false);
       setHostname('');
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (hostnameId: string) => deleteCustomHostname(zoneId!, hostnameId),
+    mutationFn: (hostnameId: string) => deleteCustomHostname(zoneId!, hostnameId, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId, credentialId] });
     },
   });
 

@@ -12,6 +12,7 @@ import { authenticateToken } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import { ProviderRegistry } from '../providers/ProviderRegistry';
 import { ProviderType } from '../providers/base/types';
+import { dnsService } from '../services/dns/DnsService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -86,21 +87,7 @@ router.post('/', async (req, res) => {
       return errorResponse(res, `不支持的提供商: ${provider}`, 400);
     }
 
-    // 验证凭证有效性
-    try {
-      const providerInstance = ProviderRegistry.createProvider({
-        provider: provider as ProviderType,
-        secrets,
-        accountId,
-        encrypted: false,
-      });
-      const isValid = await providerInstance.checkAuth();
-      if (!isValid) {
-        return errorResponse(res, '凭证验证失败，请检查认证信息', 400);
-      }
-    } catch (error: any) {
-      return errorResponse(res, `凭证验证失败: ${error.message}`, 400);
-    }
+    // 不再强制验证凭证，实际使用时会自然暴露问题
 
     // 加密 secrets
     const encryptedSecrets = encrypt(JSON.stringify(secrets));
@@ -168,23 +155,9 @@ router.put('/:id', async (req, res) => {
     if (name) updateData.name = name;
     if (accountId !== undefined) updateData.accountId = accountId;
 
-    // 如果更新 secrets，需要验证
+    // 更新 secrets 时不再强制验证
     if (secrets) {
-      try {
-        const providerInstance = ProviderRegistry.createProvider({
-          provider: existing.provider as ProviderType,
-          secrets,
-          accountId: accountId || existing.accountId || undefined,
-          encrypted: false,
-        });
-        const isValid = await providerInstance.checkAuth();
-        if (!isValid) {
-          return errorResponse(res, '凭证验证失败', 400);
-        }
-        updateData.secrets = encrypt(JSON.stringify(secrets));
-      } catch (error: any) {
-        return errorResponse(res, `凭证验证失败: ${error.message}`, 400);
-      }
+      updateData.secrets = encrypt(JSON.stringify(secrets));
     }
 
     // 设置默认凭证
@@ -209,6 +182,11 @@ router.put('/:id', async (req, res) => {
         updatedAt: true,
       },
     });
+
+    // 如果更新了 secrets，清除 DnsService 缓存的 Provider 实例
+    if (secrets) {
+      dnsService.clearAllCache();
+    }
 
     await createLog({
       userId,

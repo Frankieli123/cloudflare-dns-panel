@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { AuthService } from '../services/auth';
+import { PrismaClient } from '@prisma/client';
+import NodeCache from 'node-cache';
 import { CloudflareService } from '../services/cloudflare';
 import { LoggerService } from '../services/logger';
 import { successResponse, errorResponse } from '../utils/response';
@@ -7,8 +8,64 @@ import { authenticateToken } from '../middleware/auth';
 import { dnsLimiter, generalLimiter } from '../middleware/rateLimit';
 import { getClientIp } from '../middleware/logger';
 import { AuthRequest } from '../types';
+import { decrypt } from '../utils/encryption';
 
 const router = Router();
+const prisma = new PrismaClient();
+
+const zoneCredentialCache = new NodeCache({ stdTTL: 300 });
+
+async function getCloudflareApiToken(userId: number, zoneId: string, credentialId?: string): Promise<string> {
+  let credential;
+
+  const cacheKey = `${userId}:${zoneId}`;
+  const cachedCredentialId = !credentialId ? zoneCredentialCache.get<number>(cacheKey) : undefined;
+  const effectiveCredentialId = credentialId || (cachedCredentialId ? String(cachedCredentialId) : undefined);
+
+  if (effectiveCredentialId) {
+    credential = await prisma.dnsCredential.findFirst({
+      where: { id: parseInt(effectiveCredentialId), userId, provider: 'cloudflare' },
+    });
+    if (!credential) {
+      throw new Error('凭证不存在或无权访问');
+    }
+
+    const secrets = JSON.parse(decrypt(credential.secrets));
+    const apiToken = secrets?.apiToken;
+    if (!apiToken) {
+      throw new Error('缺少 Cloudflare API Token');
+    }
+
+    return apiToken;
+  }
+
+  const credentials = await prisma.dnsCredential.findMany({
+    where: { userId, provider: 'cloudflare' },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+  });
+
+  if (credentials.length === 0) {
+    throw new Error('未配置 Cloudflare 凭证');
+  }
+
+  for (const cred of credentials) {
+    try {
+      const secrets = JSON.parse(decrypt(cred.secrets));
+      const apiToken = secrets?.apiToken;
+      if (!apiToken) continue;
+
+      const cfService = new CloudflareService(apiToken);
+      await cfService.getDomainById(zoneId);
+
+      zoneCredentialCache.set(cacheKey, cred.id);
+      return apiToken;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error('无法访问该域名，请确认选择了正确的 Cloudflare 账户/凭证');
+}
 
 /**
  * GET /api/hostnames/:zoneId/fallback_origin
@@ -17,12 +74,16 @@ const router = Router();
 router.get('/:zoneId/fallback_origin', authenticateToken, generalLimiter, async (req: AuthRequest, res) => {
   try {
     const { zoneId } = req.params;
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credentialId = req.query.credentialId as string | undefined;
+    const apiToken = await getCloudflareApiToken(req.user!.id, zoneId, credentialId);
+    const cfService = new CloudflareService(apiToken);
     const origin = await cfService.getFallbackOrigin(zoneId);
     return successResponse(res, { origin }, '获取回退源成功');
   } catch (error: any) {
-    return errorResponse(res, error.message, 400);
+    const statusCode = typeof error?.status === 'number'
+      ? error.status
+      : (typeof error?.statusCode === 'number' ? error.statusCode : 400);
+    return errorResponse(res, error.message, statusCode);
   }
 });
 
@@ -37,8 +98,9 @@ router.put('/:zoneId/fallback_origin', authenticateToken, dnsLimiter, async (req
     
     if (!origin) return errorResponse(res, '回退源地址不能为空', 400);
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credentialId = req.query.credentialId as string | undefined;
+    const apiToken = await getCloudflareApiToken(req.user!.id, zoneId, credentialId);
+    const cfService = new CloudflareService(apiToken);
     const result = await cfService.updateFallbackOrigin(zoneId, origin);
 
     await LoggerService.createLog({
@@ -52,7 +114,10 @@ router.put('/:zoneId/fallback_origin', authenticateToken, dnsLimiter, async (req
 
     return successResponse(res, { origin: result }, '更新回退源成功');
   } catch (error: any) {
-    return errorResponse(res, error.message, 400);
+    const statusCode = typeof error?.status === 'number'
+      ? error.status
+      : (typeof error?.statusCode === 'number' ? error.statusCode : 400);
+    return errorResponse(res, error.message, statusCode);
   }
 });
 
@@ -64,8 +129,9 @@ router.get('/:zoneId', authenticateToken, generalLimiter, async (req: AuthReques
   try {
     const { zoneId } = req.params;
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credentialId = req.query.credentialId as string | undefined;
+    const apiToken = await getCloudflareApiToken(req.user!.id, zoneId, credentialId);
+    const cfService = new CloudflareService(apiToken);
 
     const hostnames = await cfService.getCustomHostnames(zoneId);
 
@@ -73,7 +139,10 @@ router.get('/:zoneId', authenticateToken, generalLimiter, async (req: AuthReques
   } catch (error: any) {
     console.error('获取自定义主机名失败:', error);
     console.error('错误详情:', JSON.stringify(error, null, 2));
-    return errorResponse(res, error.message, 400);
+    const statusCode = typeof error?.status === 'number'
+      ? error.status
+      : (typeof error?.statusCode === 'number' ? error.statusCode : 400);
+    return errorResponse(res, error.message, statusCode);
   }
 });
 
@@ -90,8 +159,9 @@ router.post('/:zoneId', authenticateToken, dnsLimiter, async (req: AuthRequest, 
       return errorResponse(res, '缺少主机名参数', 400);
     }
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credentialId = req.query.credentialId as string | undefined;
+    const apiToken = await getCloudflareApiToken(req.user!.id, zoneId, credentialId);
+    const cfService = new CloudflareService(apiToken);
 
     const result = await cfService.createCustomHostname(zoneId, hostname);
 
@@ -119,7 +189,10 @@ router.post('/:zoneId', authenticateToken, dnsLimiter, async (req: AuthRequest, 
       ipAddress: getClientIp(req),
     });
 
-    return errorResponse(res, error.message, 400);
+    const statusCode = typeof error?.status === 'number'
+      ? error.status
+      : (typeof error?.statusCode === 'number' ? error.statusCode : 400);
+    return errorResponse(res, error.message, statusCode);
   }
 });
 
@@ -131,8 +204,9 @@ router.delete('/:zoneId/:hostnameId', authenticateToken, dnsLimiter, async (req:
   try {
     const { zoneId, hostnameId } = req.params;
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credentialId = req.query.credentialId as string | undefined;
+    const apiToken = await getCloudflareApiToken(req.user!.id, zoneId, credentialId);
+    const cfService = new CloudflareService(apiToken);
 
     await cfService.deleteCustomHostname(zoneId, hostnameId);
 
@@ -157,7 +231,10 @@ router.delete('/:zoneId/:hostnameId', authenticateToken, dnsLimiter, async (req:
       ipAddress: getClientIp(req),
     });
 
-    return errorResponse(res, error.message, 400);
+    const statusCode = typeof error?.status === 'number'
+      ? error.status
+      : (typeof error?.statusCode === 'number' ? error.statusCode : 400);
+    return errorResponse(res, error.message, statusCode);
   }
 });
 

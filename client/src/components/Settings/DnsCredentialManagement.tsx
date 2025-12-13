@@ -24,8 +24,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
   Storage as StorageIcon,
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
@@ -39,6 +37,7 @@ import {
   getProviders
 } from '@/services/dnsCredentials';
 import { DnsCredential, ProviderConfig, ProviderType } from '@/types/dns';
+import { useProvider } from '@/contexts/ProviderContext';
 import ProviderSelector, { getProviderIcon } from './ProviderSelector';
 
 interface CredentialFormInputs {
@@ -49,6 +48,7 @@ interface CredentialFormInputs {
 }
 
 export default function DnsCredentialManagement() {
+  const { refreshData: refreshProviderData } = useProvider();
   const [credentials, setCredentials] = useState<DnsCredential[]>([]);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -179,20 +179,10 @@ export default function DnsCredentialManagement() {
       }
 
       await loadData();
+      await refreshProviderData();
       handleCloseDialog();
     } catch (error: any) {
       setSubmitError(typeof error === 'string' ? error : (error.message || '操作失败'));
-    }
-  };
-
-  // 设置默认
-  const handleSetDefault = async (cred: DnsCredential) => {
-    if (cred.isDefault) return;
-    try {
-      await updateDnsCredential(cred.id, { isDefault: true });
-      await loadData();
-    } catch (error) {
-      console.error('设置默认失败', error);
     }
   };
 
@@ -202,6 +192,7 @@ export default function DnsCredentialManagement() {
     try {
       await deleteDnsCredential(credentialToDelete.id);
       await loadData();
+      await refreshProviderData();
       setDeleteDialogOpen(false);
       setCredentialToDelete(null);
     } catch (error) {
@@ -243,9 +234,7 @@ export default function DnsCredentialManagement() {
                 <Card variant="outlined" sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  p: 2,
-                  borderColor: cred.isDefault ? 'primary.main' : undefined,
-                  bgcolor: cred.isDefault ? 'primary.50' : undefined
+                  p: 2
                 }}>
                   <Box sx={{ mr: 2, color: 'text.secondary' }}>
                     {getProviderIcon(cred.provider, 'small')}
@@ -255,9 +244,6 @@ export default function DnsCredentialManagement() {
                       <Typography variant="subtitle1" fontWeight="bold">
                         {cred.name}
                       </Typography>
-                      {cred.isDefault && (
-                        <Chip label="默认" size="small" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
-                      )}
                       <Chip
                         label={cred.providerName || cred.provider}
                         size="small"
@@ -292,18 +278,6 @@ export default function DnsCredentialManagement() {
                           ) : (
                             <CheckCircleIcon fontSize="small" />
                           )}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="设为默认">
-                      <span>
-                        <IconButton
-                          size="small"
-                          color={cred.isDefault ? 'primary' : 'default'}
-                          onClick={() => handleSetDefault(cred)}
-                          disabled={cred.isDefault}
-                        >
-                          {cred.isDefault ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>
                       </span>
                     </Tooltip>

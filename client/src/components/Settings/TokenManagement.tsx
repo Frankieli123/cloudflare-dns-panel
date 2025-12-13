@@ -27,8 +27,6 @@ import {
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { useAccount } from '@/contexts/AccountContext';
@@ -144,17 +142,6 @@ export default function TokenManagement() {
     }
   };
 
-  // 设置默认账户
-  const handleSetDefault = async (credential: CfCredential) => {
-    if (credential.isDefault) return;
-    try {
-      await updateCredential(credential.id, { isDefault: true });
-      await refreshAccounts();
-    } catch (error: any) {
-      console.error('设置默认失败', error);
-    }
-  };
-
   // 删除账户确认
   const handleDeleteClick = (credential: CfCredential) => {
     setCredentialToDelete(credential);
@@ -204,38 +191,18 @@ export default function TokenManagement() {
                 <Card variant="outlined" sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  p: 2,
-                  borderColor: account.isDefault ? 'primary.main' : undefined,
-                  bgcolor: account.isDefault ? 'primary.50' : undefined
+                  p: 2
                 }}>
                   <Box sx={{ flexGrow: 1 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {account.name}
-                      </Typography>
-                      {account.isDefault && (
-                        <Chip label="默认" size="small" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
-                      )}
-                    </Stack>
+                    <Typography variant="subtitle1" fontWeight="bold" mb={0.5}>
+                      {account.name}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
                       Token: •••• •••• •••• {account.id ? '****' : ''}
                     </Typography>
                   </Box>
 
                   <Stack direction="row" spacing={1}>
-                    <Tooltip title="设为默认">
-                      <span>
-                        <IconButton
-                          size="small"
-                          color={account.isDefault ? 'primary' : 'default'}
-                          onClick={() => handleSetDefault(account)}
-                          disabled={account.isDefault}
-                        >
-                          {account.isDefault ? <StarIcon /> : <StarBorderIcon />}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-
                     <Tooltip title="编辑">
                       <IconButton size="small" onClick={() => handleOpenEdit(account)}>
                         <EditIcon fontSize="small" />

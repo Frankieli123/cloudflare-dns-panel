@@ -20,6 +20,7 @@ import {
   Stack,
   IconButton,
   Collapse,
+  Divider,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -38,32 +39,68 @@ import { getStoredUser } from '@/services/auth';
 import { alpha } from '@mui/material/styles';
 import { Domain } from '@/types';
 import DnsManagement from '@/components/DnsManagement/DnsManagement';
-import AccountTabs from '@/components/AccountSwitcher/AccountTabs';
-import { useAccount } from '@/contexts/AccountContext';
+import ProviderAccountTabs from '@/components/Dashboard/ProviderAccountTabs';
+import { useProvider } from '@/contexts/ProviderContext';
 
-/**
- * 仪表盘页面 - 域名列表
- */
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedDomainId, setExpandedDomainId] = useState<string | null>(null);
   const user = getStoredUser();
-  const { currentAccountId } = useAccount();
+
+  const { selectedCredentialId, selectedProvider, getCredentialsByProvider } = useProvider();
+
+  const currentProviderCredentials = selectedProvider
+    ? getCredentialsByProvider(selectedProvider)
+    : [];
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['domains', currentAccountId],
-    queryFn: () => getDomains(currentAccountId),
+    queryKey: ['domains', selectedProvider, selectedCredentialId],
+    queryFn: async () => {
+      if (!selectedProvider || currentProviderCredentials.length === 0) {
+        return { data: { domains: [] } };
+      }
+
+      if (selectedCredentialId === 'all') {
+        const results = await Promise.allSettled(
+          currentProviderCredentials.map(cred => getDomains(cred.id))
+        );
+
+        const allDomains: Domain[] = [];
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value.data?.domains) {
+            const cred = currentProviderCredentials[index];
+            result.value.data.domains.forEach(domain => {
+              allDomains.push({
+                ...domain,
+                credentialId: cred.id,
+                credentialName: cred.name,
+              });
+            });
+          }
+        });
+
+        return { data: { domains: allDomains } };
+      }
+
+      return getDomains(selectedCredentialId);
+    },
+    enabled: !!selectedProvider && currentProviderCredentials.length > 0,
   });
 
-  // 当账户切换时，清除搜索和展开状态
   useEffect(() => {
     setSearchTerm('');
     setExpandedDomainId(null);
-  }, [currentAccountId]);
+  }, [selectedCredentialId, selectedProvider]);
 
   const handleRefresh = async () => {
-    await refreshDomains(currentAccountId);
-    refetch();
+    if (selectedProvider) {
+      if (selectedCredentialId === 'all') {
+        await Promise.all(currentProviderCredentials.map(c => refreshDomains(c.id)));
+      } else if (selectedCredentialId) {
+        await refreshDomains(selectedCredentialId);
+      }
+      refetch();
+    }
   };
 
   const domains: Domain[] = data?.data?.domains || [];
@@ -86,29 +123,19 @@ export default function Dashboard() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const showAccountColumn = selectedCredentialId === 'all' && currentProviderCredentials.length > 1;
 
   return (
-    <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-          欢迎回来, {user?.username} 👋
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          您当前共有 <strong>{domains.length}</strong> 个域名，其中 <strong>{activeCount}</strong> 个正在运行。
-        </Typography>
-      </Box>
+    <Box sx={{ maxWidth: 1600, mx: 'auto' }}>
+      {/* 域名列表卡片 (包含顶部的 Tabs) */}
+      <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        
+        {/* 将 Tabs 整合到卡片顶部 */}
+        <Box sx={{ bgcolor: 'background.paper' }}>
+           <ProviderAccountTabs />
+           <Divider />
+        </Box>
 
-      {/* 账户切换 Tabs */}
-      <AccountTabs />
-
-      <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         <CardContent sx={{ p: 3 }}>
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
@@ -129,22 +156,36 @@ export default function Dashboard() {
                   </InputAdornment>
                 ),
               }}
+              disabled={!selectedProvider}
             />
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}
-              disabled={isRefetching}
-              sx={{ borderColor: 'divider', color: 'text.secondary', '&:hover': { borderColor: 'primary.main', color: 'primary.main' } }}
+              disabled={isRefetching || !selectedProvider}
+              sx={{
+                borderColor: 'divider',
+                color: 'text.secondary',
+                '&:hover': { borderColor: 'primary.main', color: 'primary.main' }
+              }}
             >
               {isRefetching ? '刷新中...' : '同步列表'}
             </Button>
           </Stack>
 
-          {error ? (
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               无法加载域名列表: {(error as any)?.message || String(error)}
             </Alert>
+          ) : !selectedProvider ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, color: 'text.secondary' }}>
+              <DnsIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
+              <Typography variant="body1">请在左侧选择一个 DNS 提供商以查看域名</Typography>
+            </Box>
           ) : (
             <TableContainer>
               <Table sx={{ minWidth: 650 }}>
@@ -152,8 +193,7 @@ export default function Dashboard() {
                   <TableRow>
                     <TableCell width={50} />
                     <TableCell>域名</TableCell>
-                    {/* 如果是全部视图，显示账户列 */}
-                    {currentAccountId === 'all' && <TableCell>所属账户</TableCell>}
+                    {showAccountColumn && <TableCell>所属账户</TableCell>}
                     <TableCell>状态</TableCell>
                     <TableCell>最后更新</TableCell>
                   </TableRow>
@@ -161,15 +201,15 @@ export default function Dashboard() {
                 <TableBody>
                   {filteredDomains.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={currentAccountId === 'all' ? 5 : 4} align="center" sx={{ py: 8 }}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'text.secondary' }}>
-                        <DnsIcon sx={{ fontSize: 48, mb: 1, opacity: 0.2 }} />
-                        <Typography variant="body1">
-                          {searchTerm ? '没有找到匹配的域名' : '暂无域名数据'}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                      <TableCell colSpan={showAccountColumn ? 5 : 4} align="center" sx={{ py: 8 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'text.secondary' }}>
+                          <DnsIcon sx={{ fontSize: 48, mb: 1, opacity: 0.2 }} />
+                          <Typography variant="body1">
+                            {searchTerm ? '没有找到匹配的域名' : '暂无域名数据'}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     filteredDomains.map((domain) => {
                       const status = getStatusConfig(domain.status);
@@ -200,8 +240,7 @@ export default function Dashboard() {
                               </Typography>
                             </TableCell>
 
-                            {/* 账户标签列 */}
-                            {currentAccountId === 'all' && (
+                            {showAccountColumn && (
                               <TableCell>
                                 <Chip
                                   size="small"
@@ -214,29 +253,32 @@ export default function Dashboard() {
                             )}
 
                             <TableCell>
-                            <Chip
-                              icon={status.icon || undefined}
-                              label={status.label}
-                              // @ts-ignore
-                              color={status.color === 'default' ? 'default' : status.color}
-                              size="small"
-                              sx={{ 
-                                bgcolor: (theme) => status.color !== 'default' ? alpha(theme.palette[status.color as 'success' | 'warning' | 'error'].main, 0.1) : undefined,
-                                color: (theme) => status.color !== 'default' ? theme.palette[status.color as 'success' | 'warning' | 'error'].dark : undefined,
-                                fontWeight: 600,
-                                border: 'none',
-                                '& .MuiChip-icon': { color: 'inherit' }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ color: 'text.secondary' }}>
-                            {domain.updatedAt ? formatRelativeTime(domain.updatedAt) : '-'}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell style={{ padding: 0 }} colSpan={currentAccountId === 'all' ? 5 : 4}>
-                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                              <DnsManagement zoneId={domain.id} />
+                              <Chip
+                                icon={status.icon || undefined}
+                                label={status.label}
+                                color={status.color === 'default' ? 'default' : status.color}
+                                size="small"
+                                sx={{
+                                  bgcolor: (theme) => status.color !== 'default'
+                                    ? alpha(theme.palette[status.color as 'success' | 'warning' | 'error'].main, 0.1)
+                                    : undefined,
+                                  color: (theme) => status.color !== 'default'
+                                    ? theme.palette[status.color as 'success' | 'warning' | 'error'].dark
+                                    : undefined,
+                                  fontWeight: 600,
+                                  border: 'none',
+                                  '& .MuiChip-icon': { color: 'inherit' }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ color: 'text.secondary' }}>
+                              {domain.updatedAt ? formatRelativeTime(domain.updatedAt) : '-'}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell style={{ padding: 0 }} colSpan={showAccountColumn ? 5 : 4}>
+                              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                <DnsManagement zoneId={domain.id} credentialId={domain.credentialId} />
                               </Collapse>
                             </TableCell>
                           </TableRow>

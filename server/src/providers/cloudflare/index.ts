@@ -86,12 +86,11 @@ export class CloudflareProvider extends BaseProvider {
   }
 
   /**
-   * 验证认证信息
+   * 验证认证信息（使用轻量级 Token 验证，不需要 Zone:Read 权限）
    */
   async checkAuth(): Promise<boolean> {
     try {
-      await this.withRetry(() => this.service.getDomains());
-      return true;
+      return await this.withRetry(() => this.service.verifyToken(), { maxRetries: 0 });
     } catch {
       return false;
     }

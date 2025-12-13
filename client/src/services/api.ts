@@ -40,13 +40,19 @@ api.interceptors.response.use(
 
       // 401 未授权 - 清除 Token 并跳转登录
       if (status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        const message = String(data?.message || '');
+        const authMessages = ['未提供认证令牌', '无效或过期的令牌', '认证失败'];
+        const shouldLogout = authMessages.some(m => message.includes(m));
+
+        if (shouldLogout) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
 
       // 返回错误信息
-      return Promise.reject(data?.message || '请求失败');
+      return Promise.reject(`${status}: ${data?.message || '请求失败'}`);
     }
 
     // 网络错误

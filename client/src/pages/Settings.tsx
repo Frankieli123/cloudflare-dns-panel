@@ -70,15 +70,6 @@ export default function Settings() {
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-          系统设置
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          管理您的账户安全和 DNS 服务商凭证
-        </Typography>
-      </Box>
-
       <Grid container spacing={3}>
         {/* 左侧：修改密码 */}
         <Grid item xs={12} md={5}>

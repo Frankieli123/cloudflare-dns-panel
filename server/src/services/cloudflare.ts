@@ -1,5 +1,6 @@
 import Cloudflare from 'cloudflare';
 import NodeCache from 'node-cache';
+import crypto from 'crypto';
 import { config } from '../config';
 import { DNSRecord, Domain } from '../types';
 
@@ -10,16 +11,36 @@ const cache = new NodeCache();
  */
 export class CloudflareService {
   private client: Cloudflare;
+  private readonly cachePrefix: string;
 
   constructor(apiToken: string) {
-    this.client = new Cloudflare({ apiToken });
+    // 清理 Token 中可能的空白字符
+    const cleanToken = apiToken.trim().replace(/[\r\n\s]/g, '');
+    this.client = new Cloudflare({ apiToken: cleanToken });
+    this.cachePrefix = crypto.createHash('sha1').update(cleanToken).digest('hex').slice(0, 12);
+  }
+
+  private key(key: string): string {
+    return `cf:${this.cachePrefix}:${key}`;
+  }
+
+  /**
+   * 验证 Token 有效性
+   */
+  async verifyToken(): Promise<boolean> {
+    try {
+      await this.client.zones.list({ per_page: 1 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
    * 获取所有域名（Zones）
    */
   async getDomains(): Promise<Domain[]> {
-    const cacheKey = 'domains';
+    const cacheKey = this.key('domains');
     const cached = cache.get<Domain[]>(cacheKey);
 
     if (cached) {
@@ -28,17 +49,26 @@ export class CloudflareService {
 
     try {
       const response = await this.client.zones.list();
-      const domains: Domain[] = response.result.map((zone: any) => ({
+      const domains: Domain[] = (response.result || []).map((zone: any) => ({
         id: zone.id,
         name: zone.name,
-        status: zone.status,
+        status: zone.status || 'active',
         updatedAt: zone.modified_on,
       }));
 
       cache.set(cacheKey, domains, config.cache.domainsTTL);
       return domains;
     } catch (error: any) {
-      throw new Error(`获取域名列表失败: ${error.message}`);
+      const status = error?.status || error?.statusCode;
+      let message = `获取域名列表失败: ${error.message}`;
+      if (status === 401) {
+        message = '获取域名列表失败: Cloudflare Token 无效或已过期';
+      } else if (status === 403) {
+        message = '获取域名列表失败: 权限不足，需要 Zone:Read 权限';
+      }
+      const err = new Error(message);
+      (err as any).status = status;
+      throw err;
     }
   }
 
@@ -50,7 +80,9 @@ export class CloudflareService {
       const response = await this.client.zones.get({ zone_id: zoneId });
       return response;
     } catch (error: any) {
-      throw new Error(`获取域名详情失败: ${error.message}`);
+      const err = new Error(`获取域名详情失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -58,7 +90,7 @@ export class CloudflareService {
    * 获取 DNS 记录列表
    */
   async getDNSRecords(zoneId: string): Promise<DNSRecord[]> {
-    const cacheKey = `dns_records_${zoneId}`;
+    const cacheKey = this.key(`dns_records_${zoneId}`);
     const cached = cache.get<DNSRecord[]>(cacheKey);
 
     if (cached) {
@@ -80,7 +112,9 @@ export class CloudflareService {
       cache.set(cacheKey, records, config.cache.recordsTTL);
       return records;
     } catch (error: any) {
-      throw new Error(`获取 DNS 记录失败: ${error.message}`);
+      const err = new Error(`获取 DNS 记录失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -110,7 +144,7 @@ export class CloudflareService {
       } as any);
 
       // 清除缓存
-      cache.del(`dns_records_${zoneId}`);
+      cache.del(this.key(`dns_records_${zoneId}`));
 
       return {
         id: response.id,
@@ -122,7 +156,9 @@ export class CloudflareService {
         priority: (response as any).priority,
       };
     } catch (error: any) {
-      throw new Error(`创建 DNS 记录失败: ${error.message}`);
+      const err = new Error(`创建 DNS 记录失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -148,7 +184,7 @@ export class CloudflareService {
       } as any);
 
       // 清除缓存
-      cache.del(`dns_records_${zoneId}`);
+      cache.del(this.key(`dns_records_${zoneId}`));
 
       return {
         id: response.id,
@@ -160,7 +196,9 @@ export class CloudflareService {
         priority: (response as any).priority,
       };
     } catch (error: any) {
-      throw new Error(`更新 DNS 记录失败: ${error.message}`);
+      const err = new Error(`更新 DNS 记录失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -172,9 +210,11 @@ export class CloudflareService {
       await this.client.dns.records.delete(recordId, { zone_id: zoneId });
 
       // 清除缓存
-      cache.del(`dns_records_${zoneId}`);
+      cache.del(this.key(`dns_records_${zoneId}`));
     } catch (error: any) {
-      throw new Error(`删除 DNS 记录失败: ${error.message}`);
+      const err = new Error(`删除 DNS 记录失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -184,9 +224,11 @@ export class CloudflareService {
   async getCustomHostnames(zoneId: string): Promise<any[]> {
     try {
       const response = await this.client.customHostnames.list({ zone_id: zoneId });
-      return response.result;
+      return response.result || [];
     } catch (error: any) {
-      throw new Error(`获取自定义主机名失败: ${error.message}`);
+      const err = new Error(`获取自定义主机名失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -195,15 +237,16 @@ export class CloudflareService {
    */
   async createCustomHostname(zoneId: string, hostname: string): Promise<any> {
     try {
-      const response = await this.client.customHostnames.create({
+      const result = await this.client.customHostnames.create({
         zone_id: zoneId,
         hostname,
         ssl: { method: 'http', type: 'dv' },
       });
-
-      return response;
+      return result;
     } catch (error: any) {
-      throw new Error(`创建自定义主机名失败: ${error.message}`);
+      const err = new Error(`创建自定义主机名失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -214,7 +257,9 @@ export class CloudflareService {
     try {
       await this.client.customHostnames.delete(hostnameId, { zone_id: zoneId });
     } catch (error: any) {
-      throw new Error(`删除自定义主机名失败: ${error.message}`);
+      const err = new Error(`删除自定义主机名失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -223,9 +268,8 @@ export class CloudflareService {
    */
   async getFallbackOrigin(zoneId: string): Promise<string> {
     try {
-      // @ts-ignore
-      const response = await this.client.customHostnames.fallbackOrigin.get({ zone_id: zoneId });
-      return (response as any).origin || '';
+      const result = await this.client.customHostnames.fallbackOrigin.get({ zone_id: zoneId });
+      return (result as any)?.origin || '';
     } catch (error: any) {
       // 某些情况下未设置返回空或404，视具体 API 表现而定
       return '';
@@ -237,14 +281,15 @@ export class CloudflareService {
    */
   async updateFallbackOrigin(zoneId: string, origin: string): Promise<string> {
     try {
-      // @ts-ignore
-      const response = await this.client.customHostnames.fallbackOrigin.update({
+      const result = await this.client.customHostnames.fallbackOrigin.update({
         zone_id: zoneId,
-        origin
+        origin,
       });
-      return (response as any).origin;
+      return (result as any)?.origin;
     } catch (error: any) {
-      throw new Error(`更新回退源失败: ${error.message}`);
+      const err = new Error(`更新回退源失败: ${error.message}`);
+      (err as any).status = error?.status || error?.statusCode;
+      throw err;
     }
   }
 
@@ -253,9 +298,14 @@ export class CloudflareService {
    */
   clearCache(key?: string) {
     if (key) {
-      cache.del(key);
+      cache.del(this.key(key));
     } else {
-      cache.flushAll();
+      const prefix = `cf:${this.cachePrefix}:`;
+      const keys = cache.keys();
+      const toDelete = keys.filter(k => k.startsWith(prefix));
+      if (toDelete.length > 0) {
+        cache.del(toDelete);
+      }
     }
   }
 }

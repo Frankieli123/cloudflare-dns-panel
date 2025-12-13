@@ -73,10 +73,6 @@ export default function Logs() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        操作日志
-      </Typography>
-
       {/* 筛选器 */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 2 }}>

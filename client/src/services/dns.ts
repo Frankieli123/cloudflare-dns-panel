@@ -5,9 +5,37 @@ import { ApiResponse, DNSRecord } from '@/types';
  * 获取 DNS 记录列表
  */
 export const getDNSRecords = async (
-  zoneId: string
+  zoneId: string,
+  credentialId?: number
 ): Promise<ApiResponse<{ records: DNSRecord[] }>> => {
-  return api.get(`/dns/${zoneId}/records`);
+  const params = credentialId !== undefined ? { credentialId } : {};
+
+  const response = await api.get(`/dns-records/zones/${zoneId}/records`, {
+    params: {
+      ...params,
+      page: 1,
+      pageSize: 5000,
+    },
+  });
+
+  const rawRecords = (response as any)?.data?.records || [];
+  const records: DNSRecord[] = rawRecords.map((r: any) => ({
+    id: r.id,
+    type: r.type,
+    name: r.name,
+    content: r.value,
+    ttl: r.ttl,
+    proxied: !!r.proxied,
+    priority: r.priority,
+  }));
+
+  return {
+    ...(response as any),
+    data: {
+      ...(response as any)?.data,
+      records,
+    },
+  } as ApiResponse<{ records: DNSRecord[] }>;
 };
 
 /**
@@ -22,9 +50,44 @@ export const createDNSRecord = async (
     ttl?: number;
     proxied?: boolean;
     priority?: number;
-  }
+  },
+  credentialId?: number
 ): Promise<ApiResponse<{ record: DNSRecord }>> => {
-  return api.post(`/dns/${zoneId}/records`, params);
+  const queryParams = credentialId !== undefined ? { credentialId } : {};
+
+  const response = await api.post(
+    `/dns-records/zones/${zoneId}/records`,
+    {
+      name: params.name,
+      type: params.type,
+      value: params.content,
+      ttl: params.ttl,
+      proxied: params.proxied,
+      priority: params.priority,
+    },
+    { params: queryParams }
+  );
+
+  const r = (response as any)?.data?.record;
+  const record: DNSRecord | null = r
+    ? {
+        id: r.id,
+        type: r.type,
+        name: r.name,
+        content: r.value,
+        ttl: r.ttl,
+        proxied: !!r.proxied,
+        priority: r.priority,
+      }
+    : null;
+
+  return {
+    ...(response as any),
+    data: {
+      ...(response as any)?.data,
+      record,
+    },
+  } as ApiResponse<{ record: DNSRecord }>;
 };
 
 /**
@@ -40,9 +103,44 @@ export const updateDNSRecord = async (
     ttl?: number;
     proxied?: boolean;
     priority?: number;
-  }
+  },
+  credentialId?: number
 ): Promise<ApiResponse<{ record: DNSRecord }>> => {
-  return api.put(`/dns/${zoneId}/records/${recordId}`, params);
+  const queryParams = credentialId !== undefined ? { credentialId } : {};
+
+  const response = await api.put(
+    `/dns-records/zones/${zoneId}/records/${recordId}`,
+    {
+      name: params.name,
+      type: params.type,
+      value: params.content,
+      ttl: params.ttl,
+      proxied: params.proxied,
+      priority: params.priority,
+    },
+    { params: queryParams }
+  );
+
+  const r = (response as any)?.data?.record;
+  const record: DNSRecord | null = r
+    ? {
+        id: r.id,
+        type: r.type,
+        name: r.name,
+        content: r.value,
+        ttl: r.ttl,
+        proxied: !!r.proxied,
+        priority: r.priority,
+      }
+    : null;
+
+  return {
+    ...(response as any),
+    data: {
+      ...(response as any)?.data,
+      record,
+    },
+  } as ApiResponse<{ record: DNSRecord }>;
 };
 
 /**
@@ -50,7 +148,9 @@ export const updateDNSRecord = async (
  */
 export const deleteDNSRecord = async (
   zoneId: string,
-  recordId: string
+  recordId: string,
+  credentialId?: number
 ): Promise<ApiResponse> => {
-  return api.delete(`/dns/${zoneId}/records/${recordId}`);
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.delete(`/dns-records/zones/${zoneId}/records/${recordId}`, { params });
 };

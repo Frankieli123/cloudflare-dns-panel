@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -24,7 +24,6 @@ import {
   Grid,
 } from '@mui/material';
 import { 
-  Add as AddIcon, 
   Delete as DeleteIcon, 
   Language as LanguageIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
@@ -41,15 +40,21 @@ import {
 } from '@/services/hostnames';
 import { formatDateTime } from '@/utils/formatters';
 
+export interface CustomHostnameListRef {
+  openAddDialog: () => void;
+  openFallbackDialog: () => void;
+}
+
 interface CustomHostnameListProps {
   zoneId: string;
+  credentialId?: number;
 }
 
 /**
  * Component for managing Custom Hostnames for a specific domain.
  * Designed to be used within the DnsManagement tabbed view.
  */
-export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) {
+const CustomHostnameList = forwardRef<CustomHostnameListRef, CustomHostnameListProps>(({ zoneId, credentialId }, ref) => {
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
@@ -58,17 +63,22 @@ export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) 
   const [inputError, setInputError] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  useImperativeHandle(ref, () => ({
+    openAddDialog: () => setShowAddDialog(true),
+    openFallbackDialog: () => setShowFallbackDialog(true),
+  }));
+
   // Fetch Hostnames
   const { data: hostnamesData, isLoading, error } = useQuery({
-    queryKey: ['custom-hostnames', zoneId],
-    queryFn: () => getCustomHostnames(zoneId),
+    queryKey: ['custom-hostnames', zoneId, credentialId],
+    queryFn: () => getCustomHostnames(zoneId, credentialId),
     enabled: !!zoneId,
   });
 
   // Fetch Fallback Origin
   const { data: originData } = useQuery({
-    queryKey: ['fallback-origin', zoneId],
-    queryFn: () => getFallbackOrigin(zoneId),
+    queryKey: ['fallback-origin', zoneId, credentialId],
+    queryFn: () => getFallbackOrigin(zoneId, credentialId),
     enabled: showFallbackDialog,
   });
 
@@ -82,9 +92,9 @@ export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) 
   }, [originData, showFallbackDialog]);
 
   const createMutation = useMutation({
-    mutationFn: (hostname: string) => createCustomHostname(zoneId, hostname),
+    mutationFn: (hostname: string) => createCustomHostname(zoneId, hostname, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId, credentialId] });
       setShowAddDialog(false);
       setHostname('');
       setInputError(false);
@@ -92,16 +102,16 @@ export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) 
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (hostnameId: string) => deleteCustomHostname(zoneId, hostnameId),
+    mutationFn: (hostnameId: string) => deleteCustomHostname(zoneId, hostnameId, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['custom-hostnames', zoneId, credentialId] });
     },
   });
 
   const updateOriginMutation = useMutation({
-    mutationFn: (origin: string) => updateFallbackOrigin(zoneId, origin),
+    mutationFn: (origin: string) => updateFallbackOrigin(zoneId, origin, credentialId),
     onSuccess: (data) => {
-      queryClient.setQueryData(['fallback-origin', zoneId], data);
+      queryClient.setQueryData(['fallback-origin', zoneId, credentialId], data);
       setShowFallbackDialog(false);
     },
   });
@@ -196,25 +206,6 @@ export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) 
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mb: 2 }}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<SettingsIcon />}
-          onClick={() => setShowFallbackDialog(true)}
-        >
-          管理回退源
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={() => setShowAddDialog(true)}
-        >
-          添加主机名
-        </Button>
-      </Stack>
-
       <Table sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow>
@@ -465,4 +456,6 @@ export default function CustomHostnameList({ zoneId }: CustomHostnameListProps) 
       </Dialog>
     </Box>
   );
-}
+});
+
+export default CustomHostnameList;

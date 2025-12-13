@@ -1,18 +1,18 @@
 import { Box, Tabs, Tab, Skeleton } from '@mui/material';
 import {
-  CloudQueue as CloudIcon,
-  SupervisedUserCircle as UserIcon,
-  Business as BusinessIcon,
-  Apps as AllIcon
+  Apps as AllIcon,
+  AccountCircle as AccountIcon,
 } from '@mui/icons-material';
-import { useAccount } from '@/contexts/AccountContext';
+import { useProvider } from '@/contexts/ProviderContext';
 
-export default function AccountTabs() {
-  const { accounts, currentAccountId, switchAccount, isLoading } = useAccount();
-
-  const handleChange = (_event: React.SyntheticEvent, newValue: number | 'all') => {
-    switchAccount(newValue);
-  };
+export default function ProviderAccountTabs() {
+  const {
+    selectedProvider,
+    selectedCredentialId,
+    selectCredential,
+    getCredentialsByProvider,
+    isLoading,
+  } = useProvider();
 
   if (isLoading) {
     return (
@@ -22,16 +22,32 @@ export default function AccountTabs() {
     );
   }
 
+  if (!selectedProvider) {
+    return null;
+  }
+
+  const accounts = getCredentialsByProvider(selectedProvider);
+
+  if (accounts.length === 0) {
+    return null;
+  }
+
+  const handleChange = (_event: React.SyntheticEvent, newValue: number | 'all') => {
+    selectCredential(newValue);
+  };
+
   return (
-    <Box sx={{ width: '100%', mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+    <Box sx={{ width: '100%', bgcolor: 'background.paper' }}>
       <Tabs
-        value={currentAccountId || 'all'}
+        value={selectedCredentialId || 'all'}
         onChange={handleChange}
         variant="scrollable"
         scrollButtons="auto"
         allowScrollButtonsMobile
         aria-label="account tabs"
         sx={{
+          minHeight: 48,
+          px: 2,
           '& .MuiTab-root': {
             minHeight: 48,
             textTransform: 'none',
@@ -51,7 +67,7 @@ export default function AccountTabs() {
             key={account.id}
             value={account.id}
             label={account.name}
-            icon={account.accountId ? <BusinessIcon fontSize="small" /> : <UserIcon fontSize="small" />}
+            icon={<AccountIcon fontSize="small" />}
             iconPosition="start"
           />
         ))}

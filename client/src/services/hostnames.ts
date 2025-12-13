@@ -5,9 +5,11 @@ import { ApiResponse, CustomHostname } from '@/types';
  * 获取自定义主机名列表
  */
 export const getCustomHostnames = async (
-  zoneId: string
+  zoneId: string,
+  credentialId?: number
 ): Promise<ApiResponse<{ hostnames: CustomHostname[] }>> => {
-  return api.get(`/hostnames/${zoneId}`);
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.get(`/hostnames/${zoneId}`, { params });
 };
 
 /**
@@ -15,9 +17,11 @@ export const getCustomHostnames = async (
  */
 export const createCustomHostname = async (
   zoneId: string,
-  hostname: string
+  hostname: string,
+  credentialId?: number
 ): Promise<ApiResponse<{ hostname: CustomHostname }>> => {
-  return api.post(`/hostnames/${zoneId}`, { hostname });
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.post(`/hostnames/${zoneId}`, { hostname }, { params });
 };
 
 /**
@@ -25,18 +29,22 @@ export const createCustomHostname = async (
  */
 export const deleteCustomHostname = async (
   zoneId: string,
-  hostnameId: string
+  hostnameId: string,
+  credentialId?: number
 ): Promise<ApiResponse> => {
-  return api.delete(`/hostnames/${zoneId}/${hostnameId}`);
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.delete(`/hostnames/${zoneId}/${hostnameId}`, { params });
 };
 
 /**
  * 获取自定义主机名回退源
  */
 export const getFallbackOrigin = async (
-  zoneId: string
+  zoneId: string,
+  credentialId?: number
 ): Promise<ApiResponse<{ origin: string }>> => {
-  return api.get(`/hostnames/${zoneId}/fallback_origin`);
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.get(`/hostnames/${zoneId}/fallback_origin`, { params });
 };
 
 /**
@@ -44,7 +52,9 @@ export const getFallbackOrigin = async (
  */
 export const updateFallbackOrigin = async (
   zoneId: string,
-  origin: string
+  origin: string,
+  credentialId?: number
 ): Promise<ApiResponse<{ origin: string }>> => {
-  return api.put(`/hostnames/${zoneId}/fallback_origin`, { origin });
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.put(`/hostnames/${zoneId}/fallback_origin`, { origin }, { params });
 };

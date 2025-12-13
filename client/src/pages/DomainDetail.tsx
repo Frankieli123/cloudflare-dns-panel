@@ -28,6 +28,7 @@ import {
 import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord } from '@/services/dns';
 import DNSRecordTable from '@/components/DNSRecordTable/DNSRecordTable';
 import QuickAddForm from '@/components/QuickAddForm/QuickAddForm';
+import { useProvider } from '@/contexts/ProviderContext';
 
 /**
  * 域名详情页面 - DNS 记录管理
@@ -38,34 +39,41 @@ export default function DomainDetail() {
   const queryClient = useQueryClient();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  const { selectedCredentialId, selectedProvider, credentials } = useProvider();
+  const credentialId = typeof selectedCredentialId === 'number' ? selectedCredentialId : undefined;
+  const credentialProvider = credentialId
+    ? credentials.find(c => c.id === credentialId)?.provider
+    : selectedProvider;
+  const supportsCustomHostnames = credentialProvider === 'cloudflare';
+
   // 获取域名信息（这里假设从缓存或上一页传递，如果没有独立API，先简单处理）
   // 实际项目中可能需要单独获取域名详情的API，或者从 location state 获取
   
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dns-records', zoneId],
-    queryFn: () => getDNSRecords(zoneId!),
+    queryKey: ['dns-records', zoneId, credentialId],
+    queryFn: () => getDNSRecords(zoneId!, credentialId),
     enabled: !!zoneId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (params: any) => createDNSRecord(zoneId!, params),
+    mutationFn: (params: any) => createDNSRecord(zoneId!, params, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId, credentialId] });
       setShowQuickAdd(false);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ recordId, params }: any) => updateDNSRecord(zoneId!, recordId, params),
+    mutationFn: ({ recordId, params }: any) => updateDNSRecord(zoneId!, recordId, params, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId, credentialId] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (recordId: string) => deleteDNSRecord(zoneId!, recordId),
+    mutationFn: (recordId: string) => deleteDNSRecord(zoneId!, recordId, credentialId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId] });
+      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId, credentialId] });
     },
   });
 
@@ -110,40 +118,41 @@ export default function DomainDetail() {
           </Breadcrumbs>
         </Stack>
 
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              DNS 记录
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-              管理当前域名的解析记录
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant="outlined"
-              startIcon={<LanguageIcon />}
-              onClick={() => {
-                console.log('点击自定义主机名按钮, zoneId:', zoneId);
-                console.log('跳转路径:', `/hostnames/${zoneId}`);
-                navigate(`/hostnames/${zoneId}`);
-              }}
-              sx={{ px: 3 }}
-            >
-              自定义主机名
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setShowQuickAdd(true)}
-              sx={{ px: 3 }}
-            >
-              添加记录
-            </Button>
-          </Stack>
-        </Stack>
-      </Box>
-
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Typography variant="h4" component="h1" fontWeight="bold">
+                        DNS 记录
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                        管理当前域名的解析记录
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={2}>
+                      {supportsCustomHostnames && (
+                        <Button
+                          variant="outlined"
+                          startIcon={<LanguageIcon />}
+                          onClick={() => {
+                            console.log('点击自定义主机名按钮, zoneId:', zoneId);
+                            console.log('跳转路径:', `/hostnames/${zoneId}`);
+                            navigate(credentialId ? `/hostnames/${zoneId}?credentialId=${credentialId}` : `/hostnames/${zoneId}`);
+                          }}
+                          sx={{ px: 3 }}
+                        >
+                          自定义主机名
+                        </Button>
+                      )}
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => setShowQuickAdd(true)}
+                        sx={{ px: 3 }}
+                      >
+                        添加记录
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Box>
       <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         <CardContent sx={{ p: 0 }}>
           <DNSRecordTable

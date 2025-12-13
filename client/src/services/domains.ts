@@ -10,8 +10,32 @@ export const getDomains = async (credentialId?: number | 'all' | null): Promise<
   if (credentialId !== undefined && credentialId !== null) {
     params.credentialId = credentialId;
   }
-  const response = await api.get('/domains', { params });
-  return response as unknown as ApiResponse<{ domains: Domain[] }>;
+  const response = await api.get('/dns-records/zones', {
+    params: {
+      ...params,
+      page: 1,
+      pageSize: 5000,
+    },
+  });
+
+  const zones = (response as any)?.data?.zones || [];
+  const credId = typeof credentialId === 'number' ? credentialId : undefined;
+  const domains: Domain[] = zones.map((z: any) => ({
+    id: z.id,
+    name: z.name,
+    status: z.status,
+    recordCount: z.recordCount,
+    updatedAt: z.updatedAt,
+    credentialId: credId,
+  }));
+
+  return {
+    ...(response as any),
+    data: {
+      ...(response as any)?.data,
+      domains,
+    },
+  } as ApiResponse<{ domains: Domain[] }>;
 };
 
 /**
@@ -22,8 +46,26 @@ export const getDomainById = async (zoneId: string, credentialId?: number): Prom
   if (credentialId) {
     params.credentialId = credentialId;
   }
-  const response = await api.get(`/domains/${zoneId}`, { params });
-  return response as unknown as ApiResponse<{ domain: any }>;
+
+  const response = await api.get(`/dns-records/zones/${zoneId}`, { params });
+  const zone = (response as any)?.data?.zone;
+  const domain = zone
+    ? {
+        id: zone.id,
+        name: zone.name,
+        status: zone.status,
+        recordCount: zone.recordCount,
+        updatedAt: zone.updatedAt,
+      }
+    : null;
+
+  return {
+    ...(response as any),
+    data: {
+      ...(response as any)?.data,
+      domain,
+    },
+  } as ApiResponse<{ domain: any }>;
 };
 
 /**
@@ -34,6 +76,6 @@ export const refreshDomains = async (credentialId?: number | 'all' | null): Prom
   if (credentialId !== undefined && credentialId !== null) {
     params.credentialId = credentialId;
   }
-  const response = await api.post('/domains/refresh', {}, { params });
+  const response = await api.post('/dns-records/refresh', {}, { params });
   return response as unknown as ApiResponse;
 };

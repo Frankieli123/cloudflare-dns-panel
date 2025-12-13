@@ -4,33 +4,23 @@ import {
   Box,
   AppBar,
   Toolbar,
-  Typography,
   IconButton,
   Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Avatar,
-  Menu,
-  MenuItem,
   useTheme,
   useMediaQuery,
-  Button,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   History as HistoryIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  CloudQueue as CloudIcon,
-  KeyboardArrowDown as ArrowDownIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
-import { clearAuthData, getStoredUser } from '@/services/auth';
+import Sidebar from './Sidebar';
 
 const drawerWidth = 260;
+const appBarHeight = 64;
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -38,25 +28,10 @@ export default function Layout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const user = getStoredUser();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    clearAuthData();
-    navigate('/login');
   };
 
   const menuItems = [
@@ -65,215 +40,86 @@ export default function Layout() {
     { text: '系统设置', icon: <SettingsIcon />, path: '/settings' },
   ];
 
+  // 确定当前选中的 tab
+  const currentTab = menuItems.find(item => item.path === location.pathname)?.path || 
+                     (location.pathname.startsWith('/domain') ? '/' : false) ||
+                     (location.pathname.startsWith('/hostnames') ? '/' : false) || 
+                     false;
+
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* 品牌区域 */}
-      <Box sx={{ 
-        p: 3, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1.5,
-        color: 'white'
-      }}>
-        <Avatar 
-          sx={{ 
-            bgcolor: theme.palette.secondary.main,
-            width: 40,
-            height: 40,
-            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
-          }}
-        >
-          <CloudIcon />
-        </Avatar>
-        <Box>
-          <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-            CF Panel
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-            DNS 管理系统
-          </Typography>
-        </Box>
-      </Box>
-
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-
-      {/* 导航菜单 */}
-      <List sx={{ px: 2, flexGrow: 1 }}>
-        {menuItems.map((item) => {
-          const isSelected = location.pathname === item.path;
-          return (
-            <ListItemButton
-              key={item.text}
-              selected={isSelected}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) setMobileOpen(false);
-              }}
-              sx={{
-                mb: 1,
-              }}
-            >
-              <ListItemIcon sx={{ 
-                color: isSelected ? theme.palette.secondary.main : 'rgba(255,255,255,0.5)' 
-              }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                primaryTypographyProps={{ 
-                  fontWeight: isSelected ? 600 : 400,
-                  fontSize: '0.95rem'
-                }} 
-              />
-            </ListItemButton>
-          );
-        })}
-      </List>
-
-      {/* 底部用户信息 (仅侧边栏显示) */}
-      <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1.5,
-            p: 1.5,
-            borderRadius: 2,
-            bgcolor: 'rgba(255,255,255,0.05)',
-            cursor: 'pointer',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
-          }}
-          onClick={handleMenuOpen}
-        >
-          <Avatar 
-            sx={{ 
-              width: 32, 
-              height: 32,
-              bgcolor: theme.palette.primary.light
-            }}
-          >
-            {user?.username?.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="body2" color="white" noWrap fontWeight="medium">
-              {user?.username}
-            </Typography>
-            <Typography variant="caption" color="rgba(255,255,255,0.5)" noWrap>
-              管理员
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1e293b' }}>
+      {/* Sidebar 内容 (包含顶部的 Logo 和下方的 DNS 提供商列表) */}
+      <Sidebar onClose={() => isMobile && setMobileOpen(false)} />
     </Box>
   );
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
-      {/* 顶部导航栏 (移动端) */}
+      {/* 顶部导航栏 */}
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          display: { sm: 'none' } // 桌面端隐藏顶部栏，保持干净
+          width: { sm: `calc(100% - ${drawerWidth}px)` }, // 桌面端宽度减去侧边栏宽度
+          ml: { sm: `${drawerWidth}px` }, // 桌面端向右偏移侧边栏宽度
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: 'background.paper',
+          color: 'text.primary',
+          borderBottom: 1,
+          borderColor: 'divider',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          height: appBarHeight
         }}
         elevation={0}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: appBarHeight }}>
           <IconButton
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
+            sx={{ mr: 2, display: { sm: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, color: 'text.primary' }}>
-            CF DNS 管理
-          </Typography>
-          <IconButton onClick={handleMenuOpen}>
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.username?.charAt(0).toUpperCase()}
-            </Avatar>
-          </IconButton>
+
+          {/* 桌面端顶部导航菜单 (Logo 已移至 Sidebar) */}
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', sm: 'flex' } }}>
+            <Tabs 
+              value={currentTab} 
+              textColor="primary"
+              indicatorColor="primary"
+              sx={{ 
+                minHeight: appBarHeight,
+                '& .MuiTabs-indicator': { display: 'none' } // 移除下划线
+              }}
+            >
+              {menuItems.map((item) => (
+                <Tab 
+                  key={item.path}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {item.icon}
+                      {item.text}
+                    </Box>
+                  }
+                  value={item.path}
+                  onClick={() => navigate(item.path)}
+                  sx={{ 
+                    minHeight: appBarHeight, 
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.95rem',
+                    opacity: 0.7,
+                    '&.Mui-selected': {
+                      opacity: 1,
+                      color: 'primary.main'
+                    }
+                  }}
+                />
+              ))}
+            </Tabs>
+          </Box>
         </Toolbar>
       </AppBar>
-
-      {/* 桌面端右上角的用户菜单触发器 (悬浮) */}
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 24,
-          right: 32,
-          zIndex: 1100,
-          display: { xs: 'none', sm: 'flex' },
-          alignItems: 'center',
-          gap: 2
-        }}
-      >
-        <Button
-          onClick={handleMenuOpen}
-          endIcon={<ArrowDownIcon />}
-          sx={{ 
-            color: 'text.primary',
-            bgcolor: 'background.paper',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            py: 1,
-            px: 2,
-            borderRadius: 50,
-            '&:hover': { bgcolor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
-          }}
-        >
-          <Avatar 
-            sx={{ 
-              width: 28, 
-              height: 28, 
-              mr: 1, 
-              fontSize: '0.875rem',
-              bgcolor: theme.palette.secondary.main
-            }}
-          >
-            {user?.username?.charAt(0).toUpperCase()}
-          </Avatar>
-          <Typography variant="body2" fontWeight="medium">
-            {user?.username}
-          </Typography>
-        </Button>
-      </Box>
-
-      {/* 用户下拉菜单 */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            mt: 1.5,
-            width: 200,
-            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.2)'
-          }
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="subtitle2" fontWeight="bold">账户</Typography>
-          <Typography variant="caption" color="text.secondary">{user?.email || 'admin@example.com'}</Typography>
-        </Box>
-        <Divider sx={{ my: 1 }} />
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          系统设置
-        </MenuItem>
-        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          退出登录
-        </MenuItem>
-      </Menu>
 
       {/* 侧边栏容器 */}
       <Box
@@ -287,7 +133,12 @@ export default function Layout() {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              bgcolor: '#1e293b', // 确保深色背景
+              borderRight: '1px solid rgba(255,255,255,0.1)'
+            },
           }}
         >
           {drawer}
@@ -296,7 +147,14 @@ export default function Layout() {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              bgcolor: '#1e293b', // 确保深色背景
+              borderRight: '1px solid rgba(255,255,255,0.1)',
+              // mt: `${appBarHeight}px`, // REMOVED: 侧边栏现在占据全高
+              height: '100%' // 确保全高
+            },
           }}
           open
         >
@@ -311,10 +169,11 @@ export default function Layout() {
           flexGrow: 1,
           p: { xs: 2, sm: 4 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: { xs: 7, sm: 0 }, // 移动端给AppBar留位置
+          mt: `${appBarHeight}px`, // 避开 AppBar
+          minHeight: `calc(100vh - ${appBarHeight}px)`,
+          overflowX: 'hidden'
         }}
       >
-        <Toolbar sx={{ display: { sm: 'none' } }} /> {/* 占位符 */}
         <Outlet />
       </Box>
     </Box>
