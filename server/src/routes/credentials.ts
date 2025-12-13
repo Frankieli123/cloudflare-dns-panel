@@ -5,6 +5,7 @@ import { CloudflareService } from '../services/cloudflare';
 import { successResponse, errorResponse } from '../utils/response';
 import { createLog } from '../services/logger';
 import { authenticateToken } from '../middleware/auth';
+import { AuthRequest } from '../types';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -17,7 +18,7 @@ router.use(authenticateToken);
  */
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).user!.id;
 
     const credentials = await prisma.cfCredential.findMany({
       where: { userId },
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).user!.id;
     const { name, apiToken, accountId } = req.body;
 
     if (!name || !apiToken) {
@@ -108,7 +109,7 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id', async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).user!.id;
     const credentialId = parseInt(req.params.id);
     const { name, apiToken, accountId, isDefault } = req.body;
 
@@ -181,7 +182,7 @@ router.put('/:id', async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).user!.id;
     const credentialId = parseInt(req.params.id);
 
     // 验证凭证归属
@@ -242,7 +243,7 @@ router.delete('/:id', async (req, res) => {
  */
 router.post('/:id/verify', async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).user!.id;
     const credentialId = parseInt(req.params.id);
 
     // 验证凭证归属
