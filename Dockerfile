@@ -42,4 +42,4 @@ RUN mkdir -p /app/data && chown -R node:node /app/data
 EXPOSE 3000
 
 # Start command
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]
