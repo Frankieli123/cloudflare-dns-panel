@@ -58,6 +58,8 @@ export interface Domain {
   status: string;
   recordCount?: number;
   updatedAt?: string;
+  credentialId?: number;
+  credentialName?: string;
 }
 
 /**
@@ -101,6 +103,18 @@ export interface CustomHostname {
     value: string;
   };
   created_at: string;
+}
+
+/**
+ * Cloudflare 凭证
+ */
+export interface CfCredential {
+  id: number;
+  name: string;
+  accountId?: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**

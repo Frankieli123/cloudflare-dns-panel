@@ -11,6 +11,7 @@ import domainRoutes from './routes/domains';
 import dnsRoutes from './routes/dns';
 import hostnameRoutes from './routes/hostnames';
 import logRoutes from './routes/logs';
+import credentialRoutes from './routes/credentials';
 
 // 验证配置
 validateConfig();
@@ -30,6 +31,7 @@ app.get('/health', (req, res) => {
 
 // API 路由
 app.use('/api/auth', authRoutes);
+app.use('/api/credentials', credentialRoutes);
 app.use('/api/domains', domainRoutes);
 app.use('/api/dns', dnsRoutes);
 app.use('/api/hostnames', hostnameRoutes);

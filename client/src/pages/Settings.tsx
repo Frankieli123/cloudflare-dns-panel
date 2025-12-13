@@ -15,24 +15,20 @@ import {
   IconButton
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { 
-  Visibility, 
+import {
+  Visibility,
   VisibilityOff,
   Security as SecurityIcon,
-  VpnKey as KeyIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { updatePassword, updateCfToken } from '@/services/auth';
+import { updatePassword } from '@/services/auth';
 import { isStrongPassword } from '@/utils/validators';
+import TokenManagement from '@/components/Settings/TokenManagement';
 
 interface PasswordForm {
   oldPassword: string;
   newPassword: string;
   confirmPassword: string;
-}
-
-interface TokenForm {
-  cfApiToken: string;
 }
 
 /**
@@ -41,8 +37,6 @@ interface TokenForm {
 export default function Settings() {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [tokenSuccess, setTokenSuccess] = useState('');
-  const [tokenError, setTokenError] = useState('');
 
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -54,13 +48,6 @@ export default function Settings() {
     reset: resetPassword,
     formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
   } = useForm<PasswordForm>();
-
-  const {
-    register: registerToken,
-    handleSubmit: handleTokenSubmit,
-    reset: resetToken,
-    formState: { errors: tokenErrors, isSubmitting: isTokenSubmitting },
-  } = useForm<TokenForm>();
 
   const newPassword = watch('newPassword');
 
@@ -81,20 +68,6 @@ export default function Settings() {
     }
   };
 
-  const onTokenSubmit = async (data: TokenForm) => {
-    try {
-      setTokenError('');
-      setTokenSuccess('');
-
-      await updateCfToken(data.cfApiToken);
-
-      setTokenSuccess('API Token 更新成功');
-      resetToken();
-    } catch (err: any) {
-      setTokenError((err as any)?.message || String(err) || 'API Token 更新失败');
-    }
-  };
-
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -102,15 +75,15 @@ export default function Settings() {
           系统设置
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          管理您的账户安全和 API 配置
+          管理您的账户安全和 Cloudflare 凭证
         </Typography>
       </Box>
 
       <Grid container spacing={3}>
-        {/* 修改密码 */}
-        <Grid item xs={12} md={6}>
+        {/* 左侧：修改密码 */}
+        <Grid item xs={12} md={5}>
           <Card sx={{ height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}>
-            <CardHeader 
+            <CardHeader
               avatar={<SecurityIcon color="primary" />}
               title={<Typography variant="h6" fontWeight="bold">安全设置</Typography>}
               subheader="修改您的登录密码"
@@ -189,9 +162,9 @@ export default function Settings() {
                   />
 
                   <Box sx={{ pt: 1 }}>
-                    <Button 
-                      type="submit" 
-                      variant="contained" 
+                    <Button
+                      type="submit"
+                      variant="contained"
                       startIcon={<SaveIcon />}
                       disabled={isPasswordSubmitting}
                     >
@@ -204,57 +177,9 @@ export default function Settings() {
           </Card>
         </Grid>
 
-        {/* 更新 API Token */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: 'none' }}>
-            <CardHeader 
-              avatar={<KeyIcon color="primary" />}
-              title={<Typography variant="h6" fontWeight="bold">API 配置</Typography>}
-              subheader="更新 Cloudflare API Token"
-            />
-            <Divider />
-            <CardContent>
-              {tokenSuccess && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  {tokenSuccess}
-                </Alert>
-              )}
-              {tokenError && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {tokenError}
-                </Alert>
-              )}
-
-              <form onSubmit={handleTokenSubmit(onTokenSubmit)}>
-                <Stack spacing={3}>
-                  <Alert severity="info" sx={{ bgcolor: 'primary.50', color: 'primary.900' }}>
-                    更新 Token 不会影响现有的 DNS 记录，但如果 Token 无效，您将无法进行新的管理操作。
-                  </Alert>
-
-                  <TextField
-                    fullWidth
-                    label="新的 API Token"
-                    {...registerToken('cfApiToken', { required: '请输入 API Token' })}
-                    error={!!tokenErrors.cfApiToken}
-                    helperText={tokenErrors.cfApiToken?.message || '在 Cloudflare 控制台获取新的 API Token'}
-                    multiline
-                    rows={2}
-                  />
-
-                  <Box>
-                    <Button 
-                      type="submit" 
-                      variant="contained" 
-                      startIcon={<SaveIcon />}
-                      disabled={isTokenSubmitting}
-                    >
-                      更新 Token
-                    </Button>
-                  </Box>
-                </Stack>
-              </form>
-            </CardContent>
-          </Card>
+        {/* 右侧：多账户 Token 管理 */}
+        <Grid item xs={12} md={7}>
+          <TokenManagement />
         </Grid>
       </Grid>
     </Box>

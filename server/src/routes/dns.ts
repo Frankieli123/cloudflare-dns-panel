@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthService } from '../services/auth';
+import { PrismaClient } from '@prisma/client';
 import { CloudflareService } from '../services/cloudflare';
 import { LoggerService } from '../services/logger';
 import { successResponse, errorResponse } from '../utils/response';
@@ -7,19 +7,57 @@ import { authenticateToken } from '../middleware/auth';
 import { dnsLimiter, generalLimiter } from '../middleware/rateLimit';
 import { getClientIp } from '../middleware/logger';
 import { AuthRequest } from '../types';
+import { decrypt } from '../utils/encryption';
 
 const router = Router();
+const prisma = new PrismaClient();
 
 /**
- * GET /api/dns/:zoneId/records
+ * 获取凭证的辅助函数
+ */
+async function getCredential(userId: number, credentialId?: string) {
+  let credential;
+
+  if (credentialId) {
+    credential = await prisma.cfCredential.findFirst({
+      where: {
+        id: parseInt(credentialId),
+        userId,
+      },
+    });
+
+    if (!credential) {
+      throw new Error('凭证不存在或无权访问');
+    }
+  } else {
+    // 使用默认凭证
+    credential = await prisma.cfCredential.findFirst({
+      where: {
+        userId,
+        isDefault: true,
+      },
+    });
+
+    if (!credential) {
+      throw new Error('未配置默认凭证');
+    }
+  }
+
+  return credential;
+}
+
+/**
+ * GET /api/dns/:zoneId/records?credentialId=xxx
  * 获取 DNS 记录列表
  */
 router.get('/:zoneId/records', authenticateToken, generalLimiter, async (req: AuthRequest, res) => {
   try {
     const { zoneId } = req.params;
+    const credentialId = req.query.credentialId as string | undefined;
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credential = await getCredential(req.user!.id, credentialId);
+    const apiToken = decrypt(credential.apiToken);
+    const cfService = new CloudflareService(apiToken);
 
     const records = await cfService.getDNSRecords(zoneId);
 
@@ -30,20 +68,22 @@ router.get('/:zoneId/records', authenticateToken, generalLimiter, async (req: Au
 });
 
 /**
- * POST /api/dns/:zoneId/records
+ * POST /api/dns/:zoneId/records?credentialId=xxx
  * 创建 DNS 记录
  */
 router.post('/:zoneId/records', authenticateToken, dnsLimiter, async (req: AuthRequest, res) => {
   try {
     const { zoneId } = req.params;
+    const credentialId = req.query.credentialId as string | undefined;
     const { type, name, content, ttl, proxied, priority } = req.body;
 
     if (!type || !name || !content) {
       return errorResponse(res, '缺少必需参数', 400);
     }
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credential = await getCredential(req.user!.id, credentialId);
+    const apiToken = decrypt(credential.apiToken);
+    const cfService = new CloudflareService(apiToken);
 
     const record = await cfService.createDNSRecord(zoneId, {
       type,
@@ -85,16 +125,18 @@ router.post('/:zoneId/records', authenticateToken, dnsLimiter, async (req: AuthR
 });
 
 /**
- * PUT /api/dns/:zoneId/records/:recordId
+ * PUT /api/dns/:zoneId/records/:recordId?credentialId=xxx
  * 更新 DNS 记录
  */
 router.put('/:zoneId/records/:recordId', authenticateToken, dnsLimiter, async (req: AuthRequest, res) => {
   try {
     const { zoneId, recordId } = req.params;
+    const credentialId = req.query.credentialId as string | undefined;
     const { type, name, content, ttl, proxied, priority } = req.body;
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credential = await getCredential(req.user!.id, credentialId);
+    const apiToken = decrypt(credential.apiToken);
+    const cfService = new CloudflareService(apiToken);
 
     // 获取旧记录
     const oldRecords = await cfService.getDNSRecords(zoneId);
@@ -139,15 +181,17 @@ router.put('/:zoneId/records/:recordId', authenticateToken, dnsLimiter, async (r
 });
 
 /**
- * DELETE /api/dns/:zoneId/records/:recordId
+ * DELETE /api/dns/:zoneId/records/:recordId?credentialId=xxx
  * 删除 DNS 记录
  */
 router.delete('/:zoneId/records/:recordId', authenticateToken, dnsLimiter, async (req: AuthRequest, res) => {
   try {
     const { zoneId, recordId } = req.params;
+    const credentialId = req.query.credentialId as string | undefined;
 
-    const cfToken = await AuthService.getUserCfToken(req.user!.id);
-    const cfService = new CloudflareService(cfToken);
+    const credential = await getCredential(req.user!.id, credentialId);
+    const apiToken = decrypt(credential.apiToken);
+    const cfService = new CloudflareService(apiToken);
 
     // 获取记录信息用于日志
     const records = await cfService.getDNSRecords(zoneId);

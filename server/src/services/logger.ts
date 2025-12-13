@@ -3,6 +3,10 @@ import { LogCreateParams } from '../types';
 
 const prisma = new PrismaClient();
 
+export async function createLog(params: LogCreateParams) {
+  return LoggerService.createLog(params);
+}
+
 /**
  * 日志服务
  */
