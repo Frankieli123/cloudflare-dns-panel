@@ -12,6 +12,9 @@ import dnsRoutes from './routes/dns';
 import hostnameRoutes from './routes/hostnames';
 import logRoutes from './routes/logs';
 import credentialRoutes from './routes/credentials';
+// 新增：多提供商路由
+import dnsCredentialRoutes from './routes/dnsCredentials';
+import dnsRecordRoutes from './routes/dnsRecords';
 
 // 验证配置
 validateConfig();
@@ -31,9 +34,11 @@ app.get('/health', (req, res) => {
 
 // API 路由
 app.use('/api/auth', authRoutes);
-app.use('/api/credentials', credentialRoutes);
-app.use('/api/domains', domainRoutes);
-app.use('/api/dns', dnsRoutes);
+app.use('/api/credentials', credentialRoutes);       // 旧版 Cloudflare 凭证（向后兼容）
+app.use('/api/dns-credentials', dnsCredentialRoutes); // 新版多提供商凭证
+app.use('/api/domains', domainRoutes);               // 旧版域名路由（向后兼容）
+app.use('/api/dns', dnsRoutes);                      // 旧版 DNS 路由（向后兼容）
+app.use('/api/dns-records', dnsRecordRoutes);        // 新版多提供商 DNS 路由
 app.use('/api/hostnames', hostnameRoutes);
 app.use('/api/logs', logRoutes);
 

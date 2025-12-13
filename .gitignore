@@ -48,3 +48,4 @@ server/prisma/migrations/
 # Temporary files
 *.tmp
 *.temp
+nul

@@ -22,21 +22,43 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // 关联
-  logs         Log[]
-  credentials  CfCredential[]
+  logs              Log[]
+  dnsCredentials    DnsCredential[]
+  cfCredentials     CfCredential[]    @relation("CfCredentials") // 废弃，仅用于迁移
 
   @@map("users")
 }
 
-// Cloudflare 凭证表（多账户支持）
-model CfCredential {
+// DNS 凭证表（多提供商、多账户支持）
+model DnsCredential {
   id          Int      @id @default(autoincrement())
   userId      Int
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String   // 账户别名，如"个人账户"、"公司账户"
-  apiToken    String   // Cloudflare API Token (AES-256 加密)
-  accountId   String?  // Cloudflare Account ID (可选)
+  provider    String   // 提供商类型: cloudflare, aliyun, dnspod, huawei, etc.
+  secrets     String   // JSON格式的认证信息 (AES-256 加密)
+                       // Cloudflare: {"apiToken": "..."}
+                       // Aliyun: {"accessKeyId": "...", "accessKeySecret": "..."}
+                       // DNSPod: {"secretId": "...", "secretKey": "..."}
+  accountId   String?  // 提供商账户ID (可选)
   isDefault   Boolean  @default(false) // 是否为默认账户
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([provider])
+  @@map("dns_credentials")
+}
+
+// [已废弃] Cloudflare 凭证表 - 保留用于数据迁移
+model CfCredential {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation("CfCredentials", fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  apiToken    String
+  accountId   String?
+  isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

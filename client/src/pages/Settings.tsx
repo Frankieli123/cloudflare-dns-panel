@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { updatePassword } from '@/services/auth';
 import { isStrongPassword } from '@/utils/validators';
-import TokenManagement from '@/components/Settings/TokenManagement';
+import DnsCredentialManagement from '@/components/Settings/DnsCredentialManagement';
 
 interface PasswordForm {
   oldPassword: string;
@@ -75,7 +75,7 @@ export default function Settings() {
           系统设置
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          管理您的账户安全和 Cloudflare 凭证
+          管理您的账户安全和 DNS 服务商凭证
         </Typography>
       </Box>
 
@@ -177,9 +177,9 @@ export default function Settings() {
           </Card>
         </Grid>
 
-        {/* 右侧：多账户 Token 管理 */}
+        {/* 右侧：DNS 账户管理 */}
         <Grid item xs={12} md={7}>
-          <TokenManagement />
+          <DnsCredentialManagement />
         </Grid>
       </Grid>
     </Box>
