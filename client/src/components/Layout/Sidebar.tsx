@@ -148,180 +148,162 @@ export default function Sidebar({ onClose }: SidebarProps) {
                                   <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 3.5, mt: 1.5, mb: 0.5 }} />                      
                             
                       
-            {/* 仪表盘入口 */}
+                        {/* 仪表盘入口 */}
                             
                       
-            <Box sx={{ px: 2, mb: 0 }}>
+                        <Box sx={{ px: 2, mb: 0 }}>
                             
                       
-              <ListItemButton
+                          <ListItemButton
                             
                       
-                onClick={() => {
+                            onClick={() => {
                             
                       
-                   // 查找第一个有账户的提供商
+                         // 查找第一个有账户的提供商
                             
                       
-                   const firstActiveProvider = PROVIDER_ORDER.find(type => getCredentialCountByProvider(type) > 0);
+                         const firstActiveProvider = PROVIDER_ORDER.find(type => getCredentialCountByProvider(type) > 0);
                             
                       
-                   
+                         
                             
                       
-                   if (firstActiveProvider) {
+                         if (firstActiveProvider) {
                             
                       
-                     selectProvider(firstActiveProvider);
+                           selectProvider(firstActiveProvider);
                             
                       
-                   } else {
+                         } else {
                             
                       
-                     selectProvider(null);
+                           selectProvider(null);
                             
                       
-                   }
+                         }
                             
                       
-                   
+                         
                             
                       
-                   navigate('/');
+                         navigate('/');
                             
                       
-                   if (onClose) onClose();
+                         if (onClose) onClose();
                             
                       
-                }}
+                      }}
                             
                       
-                          sx={{
+                      sx={{
                             
                       
-                            borderRadius: '12px',
+                        py: 0.8,
                             
                       
-                            py: 0.8,
+                        px: 2,
                             
                       
-                            px: 2,
+                        // 移除边框和固定背景，回归简洁
                             
                       
-                            // 移除边框和固定背景，回归简洁
+                        color: 'rgba(255,255,255,0.7)',
                             
                       
-                            color: 'rgba(255,255,255,0.7)',
+                        '&:hover': {
                             
                       
-                            '&:hover': {
+                          bgcolor: 'transparent',
                             
                       
-                              bgcolor: 'transparent',
+                          color: 'white'
                             
                       
-                              color: 'white'
+                        },
                             
                       
-                            }
+                        '&.Mui-focusVisible': { bgcolor: 'transparent' },
                             
                       
-                          }}
+                        '&:active': { bgcolor: 'transparent' }
                             
                       
-              >
-                      
+                      }}
                             
                       
-                                            <Box
-                      
+                    >
                             
                       
-                                              sx={{
-                      
+                      <Box
                             
                       
-                                                width: 32,
-                      
+                        sx={{
                             
                       
-                                                height: 32,
-                      
+                          width: 32,
                             
                       
-                                                borderRadius: '8px',
-                      
+                          height: 32,
                             
                       
-                                                display: 'flex',
-                      
+                          display: 'flex',
                             
                       
-                                                alignItems: 'center',
-                      
+                          alignItems: 'center',
                             
                       
-                                                justifyContent: 'center',
-                      
+                          justifyContent: 'center',
                             
                       
-                                                bgcolor: 'rgba(255,255,255,0.05)',
-                      
+                          color: 'white',
                             
                       
-                                                color: 'white',
-                      
+                          mr: 2,
                             
                       
-                                                mr: 2,
-                      
+                        }}
                             
                       
-                                              }}
+                      >
+                            
+                      
+                        <DashboardIcon fontSize="small" sx={{ fontSize: 20 }} />
+                            
+                      
+                      </Box>
                       
                             
                       
-                                            >
+                                                      <ListItemText 
                       
                             
                       
-                                              <DashboardIcon fontSize="small" />
+                                                        primary="仪表盘" 
                       
                             
                       
-                                            </Box>
+                                                        primaryTypographyProps={{
                       
                             
                       
-                                            <ListItemText 
+                                                          variant: 'body2',
                       
                             
                       
-                                              primary="仪表盘" 
+                                                          fontWeight: 500,
                       
                             
                       
-                                              primaryTypographyProps={{ 
+                                                          fontSize: '1rem'
                       
                             
                       
-                                                variant: 'body2', 
+                                                        }}
                       
                             
                       
-                                                fontWeight: 500,
-                      
-                            
-                      
-                                                fontSize: '0.9rem'
-                      
-                            
-                      
-                                              }}
-                      
-                            
-                      
-                                            />
+                                                      />
                       
                             
                       
