@@ -148,141 +148,88 @@ export default function Sidebar({ onClose }: SidebarProps) {
                                   <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 3.5, mt: 1.5, mb: 0.5 }} />                      
                             
                       
-      {/* 仪表盘入口 */}
-      <Box sx={{ px: 2, mb: 0 }}>
-        <ListItemButton
-                      
+            {/* 仪表盘入口 */}
                             
                       
-                                            onClick={() => {
-                      
+            <Box sx={{ px: 2, mb: 0 }}>
                             
                       
-                                               // 查找第一个有账户的提供商
-                      
+              <ListItemButton
                             
                       
-                                               const firstActiveProvider = PROVIDER_ORDER.find(type => getCredentialCountByProvider(type) > 0);
-                      
+                onClick={() => {
                             
                       
-                                               
-                      
+                   // 查找第一个有账户的提供商
                             
                       
-                                               if (firstActiveProvider) {
-                      
+                   const firstActiveProvider = PROVIDER_ORDER.find(type => getCredentialCountByProvider(type) > 0);
                             
                       
-                                                 selectProvider(firstActiveProvider);
-                      
+                   
                             
                       
-                                               } else {
-                      
+                   if (firstActiveProvider) {
                             
                       
-                                                 selectProvider(null);
-                      
+                     selectProvider(firstActiveProvider);
                             
                       
-                                               }
-                      
+                   } else {
                             
                       
-                                               
-                      
+                     selectProvider(null);
                             
                       
-                                               navigate('/');
-                      
+                   }
                             
                       
-                                               if (onClose) onClose();
-                      
+                   
                             
                       
-                                            }}
-                      
+                   navigate('/');
                             
                       
-                                            sx={{
-                      
+                   if (onClose) onClose();
                             
                       
-                                              borderRadius: '12px',
-                      
+                }}
                             
                       
-                                              py: 1.2,
-                      
+                          sx={{
                             
                       
-                                              px: 2,
-                      
+                            borderRadius: '12px',
                             
                       
-                                              // 当选中了某个提供商，且该提供商就是第一个有账户的提供商时，理论上仪表盘也算“激活”状态
-                      
+                            py: 0.8,
                             
                       
-                                              // 但为了简单区分，只有当 selectedProvider 为 null 时（未选中特定，或全览模式）才高亮？
-                      
+                            px: 2,
                             
                       
-                                              // 不，现在逻辑变了，点击仪表盘 = 选中第一个。
-                      
+                            // 移除边框和固定背景，回归简洁
                             
                       
-                                              // 所以这里的高亮逻辑可能需要调整。
-                      
+                            color: 'rgba(255,255,255,0.7)',
                             
                       
-                                              // 暂时保持原样：如果 selectedProvider 为 null (没找到有账户的或者手动清空)，高亮。
-                      
+                            '&:hover': {
                             
                       
-                                              // 或者，我们可以让这个按钮永远不高亮（因为它只是一个快捷入口），或者总是高亮如果当前在 Dashboard 页面且选中的是自动匹配的那个。
-                      
+                              bgcolor: 'transparent',
                             
                       
-                                              // 鉴于用户习惯，可能希望点击后看到内容，而左侧哪个 Provider 被选中就高亮哪个。
-                      
+                              color: 'white'
                             
                       
-                                              // 所以这个“仪表盘”按钮本身可能不需要高亮，或者只有在完全没选中时高亮。
-                      
+                            }
                             
                       
-                                              color: 'rgba(255,255,255,0.7)',
-                      
+                          }}
                             
                       
-                                              bgcolor: 'transparent',
-                      
-                            
-                      
-                                              '&:hover': {
-                      
-                            
-                      
-                                                bgcolor: 'rgba(255,255,255,0.08)',
-                      
-                            
-                      
-                                                color: 'white'
-                      
-                            
-                      
-                                              }
-                      
-                            
-                      
-                                            }}
-                      
-                            
-                      
-                                          >
+              >
                       
                             
                       
@@ -574,173 +521,283 @@ export default function Sidebar({ onClose }: SidebarProps) {
                       
                                           })}
                       
-                                        </List>
+                                              </List>
                       
-                                        
+                                              
                       
-                                        <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 3 }} />
+            {/* 底部用户区域 */}
                       
-                                  
+                                              
                       
-                                        {/* 底部功能菜单：操作日志 & 系统设置 */}
+            <Box sx={{ p: 2, pt: 1 }}>
                       
-                                        <Box sx={{ px: 2, py: 2 }}>
+                                              
                       
-                                          <ListItemButton
+              <Box 
                       
-                                            onClick={() => { navigate('/logs'); if (onClose) onClose(); }}
+                                              
                       
-                                            sx={{
+                sx={{ 
                       
-                                              borderRadius: '12px',
+                                              
                       
-                                              py: 1.2,
+                  display: 'flex', 
                       
-                                              px: 2,
+                                              
                       
-                                              mb: 1,
+                  alignItems: 'center', 
                       
-                                              color: location.pathname === '/logs' ? 'white' : 'rgba(255,255,255,0.7)',
+                                              
                       
-                                              bgcolor: location.pathname === '/logs' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  gap: 2,
                       
-                                              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' }
+                                              
                       
-                                            }}
+                  p: 1.5,
                       
-                                          >
+                                              
                       
-                                            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                  borderRadius: '12px',
                       
-                                              <HistoryIcon fontSize="small" />
+                                              
                       
-                                            </ListItemIcon>
+                  bgcolor: 'rgba(255,255,255,0.03)',
                       
-                                            <ListItemText primary="操作日志" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }} />
+                                              
                       
-                                          </ListItemButton>
+                  border: '1px solid rgba(255,255,255,0.05)',
                       
-                                  
+                                              
                       
-                                          <ListItemButton
+                  cursor: 'pointer',
                       
-                                            onClick={() => { navigate('/settings'); if (onClose) onClose(); }}
+                                              
                       
-                                            sx={{
+                  transition: 'all 0.2s',
                       
-                                              borderRadius: '12px',
+                                              
                       
-                                              py: 1.2,
+                  '&:hover': { 
                       
-                                              px: 2,
+                                              
                       
-                                              color: location.pathname === '/settings' ? 'white' : 'rgba(255,255,255,0.7)',
+                    bgcolor: 'rgba(255,255,255,0.08)',
                       
-                                              bgcolor: location.pathname === '/settings' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                              
                       
-                                              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' }
+                    borderColor: 'rgba(255,255,255,0.1)'
                       
-                                            }}
+                                              
                       
-                                          >
+                  }
                       
-                                            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                                              
                       
-                                              <SettingsIcon fontSize="small" />
+                }}
                       
-                                            </ListItemIcon>
+                                              
                       
-                                            <ListItemText primary="系统设置" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }} />
+                onClick={handleUserMenuOpen}
                       
-                                          </ListItemButton>
+                                              
                       
-                                        </Box>
+              >
                       
-                                        
+                                              
                       
-                                        {/* 底部用户区域 */}
+                <Avatar 
                       
-                                        <Box sx={{ p: 2, pt: 0 }}>
+                                              
                       
-                                          <Box 
+                  sx={{ 
                       
-                                            sx={{ 
+                                              
                       
-                                              display: 'flex', 
+                    width: 36, 
                       
-                                              alignItems: 'center', 
+                                              
                       
-                                              gap: 2,
+                    height: 36, 
                       
-                                              p: 1.5,
+                                              
                       
-                                              borderRadius: '12px',
+                    bgcolor: theme.palette.primary.light,
                       
-                                              bgcolor: 'rgba(255,255,255,0.03)',
+                                              
                       
-                                              border: '1px solid rgba(255,255,255,0.05)',
+                    fontSize: '1rem'
                       
-                                              cursor: 'pointer',
+                                              
                       
-                                              transition: 'all 0.2s',
+                  }}
                       
-                                              '&:hover': { 
+                                              
                       
-                                                bgcolor: 'rgba(255,255,255,0.08)',
+                >
                       
-                                                borderColor: 'rgba(255,255,255,0.1)'
+                                              
                       
-                                              }
+                  {user?.username?.charAt(0).toUpperCase()}
                       
-                                            }}
+                                              
                       
-                                            onClick={handleUserMenuOpen}
+                </Avatar>
                       
-                                          >
+                                              
                       
-                                            <Avatar 
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                       
-                                              sx={{ 
+                                              
                       
-                                                width: 36, 
+                  <Typography variant="subtitle2" color="white" noWrap fontWeight="bold">
                       
-                                                height: 36, 
+                                              
                       
-                                                bgcolor: theme.palette.primary.light,
+                    {user?.username}
                       
-                                                fontSize: '1rem'
+                                              
                       
-                                              }}
+                  </Typography>
                       
-                                            >
+                                              
                       
-                                              {user?.username?.charAt(0).toUpperCase()}
+                  <Typography variant="caption" color="rgba(255,255,255,0.5)" noWrap>
                       
-                                            </Avatar>
+                                              
                       
-                                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    管理员
                       
-                                              <Typography variant="subtitle2" color="white" noWrap fontWeight="bold">
+                                              
                       
-                                                {user?.username}
+                  </Typography>
                       
-                                              </Typography>
+                                              
                       
-                                              <Typography variant="caption" color="rgba(255,255,255,0.5)" noWrap>
+                </Box>
                       
-                                                管理员
+                                              
                       
-                                              </Typography>
+                
                       
-                                            </Box>
+                                              
                       
-                                            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                {/* 右侧功能图标垂直排列 */}
                       
-                                              <LogoutIcon fontSize="small" />
+                                              
                       
-                                            </IconButton>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                       
-                                          </Box>
+                                              
+                      
+                  <Tooltip title="操作日志" placement="left">
+                      
+                                              
+                      
+                    <IconButton 
+                      
+                                              
+                      
+                      size="small" 
+                      
+                                              
+                      
+                      onClick={(e) => { e.stopPropagation(); navigate('/logs'); }}
+                      
+                                              
+                      
+                      sx={{ 
+                      
+                                              
+                      
+                        color: 'rgba(255,255,255,0.5)', 
+                      
+                                              
+                      
+                        p: 0.2,
+                      
+                                              
+                      
+                        '&:hover': { color: 'white' } 
+                      
+                                              
+                      
+                      }}
+                      
+                                              
+                      
+                    >
+                      
+                                              
+                      
+                      <HistoryIcon sx={{ fontSize: 18 }} />
+                      
+                                              
+                      
+                    </IconButton>
+                      
+                                              
+                      
+                  </Tooltip>
+                      
+                                              
+                      
+                  <Tooltip title="系统设置" placement="left">
+                      
+                                              
+                      
+                    <IconButton 
+                      
+                                              
+                      
+                      size="small" 
+                      
+                                              
+                      
+                      onClick={(e) => { e.stopPropagation(); navigate('/settings'); }}
+                      
+                                              
+                      
+                      sx={{ 
+                      
+                                              
+                      
+                        color: 'rgba(255,255,255,0.5)', 
+                      
+                                              
+                      
+                        p: 0.2,
+                      
+                                              
+                      
+                        '&:hover': { color: 'white' } 
+                      
+                                              
+                      
+                      }}
+                      
+                                              
+                      
+                    >
+                      
+                                              
+                      
+                      <SettingsIcon sx={{ fontSize: 18 }} />
+                      
+                                              
+                      
+                    </IconButton>
+                      
+                                              
+                      
+                  </Tooltip>
+                      
+                                              
+                      
+                </Box>
+                      
+                                              
+                      
+              </Box>
                       
                                           
                       
