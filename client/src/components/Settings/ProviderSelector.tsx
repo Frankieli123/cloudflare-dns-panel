@@ -37,7 +37,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 export const getProviderIcon = (type: string, size: 'small' | 'large' = 'large') => {
-  const fontSize = size === 'large' ? 'large' : 'small';
+  const fontSize = size === 'large' ? 'medium' : 'small';
   const color = PROVIDER_COLORS[type] || '#757575';
   const sx = { color };
 
@@ -76,14 +76,14 @@ export default function ProviderSelector({ providers, selectedProvider, onSelect
 
   return (
     <Box sx={{ maxHeight: '60vh', overflowY: 'auto', p: 0.5 }}>
-      <Grid container spacing={2}>
+      <Grid container spacing={1.5}>
         {providers.map((provider) => {
           const providerType = provider.type;
           const isSelected = !!providerType && selectedProvider === providerType;
           const brandColor = PROVIDER_COLORS[providerType] || theme.palette.primary.main;
 
           return (
-            <Grid item xs={6} sm={4} md={3} key={provider.type || provider.name}>
+            <Grid item xs={6} sm={4} md={2.4} key={provider.type || provider.name}>
               <Card
                 variant="outlined"
                 sx={{
@@ -91,11 +91,13 @@ export default function ProviderSelector({ providers, selectedProvider, onSelect
                   height: '100%',
                   borderColor: isSelected ? brandColor : undefined,
                   bgcolor: isSelected ? alpha(brandColor, 0.04) : undefined,
+                  borderWidth: isSelected ? 2 : 1,
                   transition: 'all 0.2s',
                   '&:hover': {
                     borderColor: brandColor,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${alpha(brandColor, 0.15)}`
+                    bgcolor: alpha(brandColor, 0.04),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 2px 6px ${alpha(brandColor, 0.15)}`
                   }
                 }}
                 onClick={() => {
@@ -103,34 +105,38 @@ export default function ProviderSelector({ providers, selectedProvider, onSelect
                   onSelect(providerType);
                 }}
               >
-                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box mb={1.5} sx={{
-                    p: 1.5,
-                    borderRadius: '50%',
+                <CardContent sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  p: '12px !important',
+                  gap: 1
+                }}>
+                  <Box sx={{
+                    p: 0.75,
+                    borderRadius: '8px',
                     bgcolor: alpha(brandColor, 0.1),
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32
                   }}>
-                    {getProviderIcon(provider.type)}
+                    {getProviderIcon(provider.type, 'large')}
                   </Box>
-                  <Typography variant="subtitle2" fontWeight="bold" align="center" noWrap sx={{ width: '100%', mb: 1 }}>
+                  <Typography variant="body2" fontWeight="600" align="center" noWrap sx={{ width: '100%', fontSize: '0.8rem' }}>
                     {provider.name}
                   </Typography>
-                  <FormControlLabel
-                    value={provider.type}
-                    control={
-                      <Radio
-                        checked={isSelected}
-                        sx={{
-                          p: 0.5,
-                          color: isSelected ? brandColor : undefined,
-                          '&.Mui-checked': { color: brandColor }
-                        }}
-                      />
-                    }
-                    label={isSelected ? "已选" : "选择"}
-                    sx={{ m: 0, '& .MuiTypography-root': { fontSize: '0.75rem', color: 'text.secondary' } }}
+                  {/* Radio 按钮对于这种卡片选择模式可能有点多余，这里通过边框和背景色已经能很好区分选中状态了，如果需要可以简化或移除 */}
+                  <Radio
+                    checked={isSelected}
+                    sx={{
+                      p: 0,
+                      opacity: isSelected ? 1 : 0, // 仅选中时显示，或者完全移除
+                      height: 0,
+                      width: 0,
+                      overflow: 'hidden'
+                    }}
                   />
                 </CardContent>
               </Card>

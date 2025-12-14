@@ -144,28 +144,24 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 3, mb: 2 }} />
 
-      {/* 侧边栏标题 */}
-      <Box sx={{ px: 3, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-          DNS 提供商
-        </Typography>
-        <Tooltip title="添加账号">
-           <Box 
-             onClick={() => navigate('/settings')}
-             sx={{ 
-               cursor: 'pointer', 
-               color: 'rgba(255,255,255,0.4)', 
-               '&:hover': { color: 'white' },
-               display: 'flex',
-               p: 0.5
-             }}
-           >
-             <AddIcon fontSize="small" />
-           </Box>
-        </Tooltip>
-      </Box>
-
-      <List component="nav" sx={{ px: 2, flexGrow: 1, overflowY: 'auto' }}>
+      <List component="nav" sx={{ 
+        px: 2, 
+        flexGrow: 1, 
+        overflowY: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          background: 'rgba(255, 255, 255, 0.2)',
+        },
+      }}>
         {sortedProviders.map((provider) => {
           const config = PROVIDER_CONFIG[provider.type];
           const count = getCredentialCountByProvider(provider.type);
@@ -173,13 +169,13 @@ export default function Sidebar({ onClose }: SidebarProps) {
           const hasAccounts = count > 0;
 
           return (
-            <Box key={provider.type} sx={{ mb: 1.5 }}>
+            <Box key={provider.type} sx={{ mb: 1 }}>
               <ListItemButton
                 onClick={() => hasAccounts ? handleSelectProvider(provider.type) : undefined}
                 sx={{
-                  borderRadius: 2,
-                  py: 1.5,
-                  px: 2,
+                  borderRadius: '12px',
+                  py: 1,
+                  px: 1.5,
                   bgcolor: isSelected ? alpha(config.color, 0.1) : 'rgba(255,255,255,0.02)',
                   border: '1px solid',
                   borderColor: isSelected ? alpha(config.color, 0.5) : 'transparent',
@@ -188,7 +184,6 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   '&:hover': {
                     bgcolor: isSelected ? alpha(config.color, 0.15) : 'rgba(255,255,255,0.05)',
                     borderColor: isSelected ? config.color : 'rgba(255,255,255,0.1)',
-                    transform: hasAccounts ? 'translateX(4px)' : 'none',
                   },
                   opacity: hasAccounts ? 1 : 0.6,
                   cursor: hasAccounts ? 'pointer' : 'default',
@@ -197,16 +192,16 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 {/* 图标容器 - 还原彩色背景块 */}
                 <Box
                   sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 1.5,
+                    width: 28,
+                    height: 28,
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     bgcolor: alpha(config.color, 0.15),
                     color: config.color,
-                    mr: 2,
-                    '& svg': { fontSize: 20 },
+                    mr: 1.5,
+                    '& svg': { fontSize: 18 },
                   }}
                 >
                   {config.icon}
@@ -217,13 +212,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   primaryTypographyProps={{ 
                     variant: 'body2', 
                     fontWeight: isSelected ? 600 : 500,
-                    fontSize: '0.9rem'
-                  }}
-                  secondary={count > 0 ? `${count} 个账户` : '未配置'}
-                  secondaryTypographyProps={{
-                    variant: 'caption',
-                    color: isSelected ? alpha(config.color, 0.8) : 'rgba(255,255,255,0.4)',
-                    sx: { mt: 0.2, display: 'block' }
+                    fontSize: '0.85rem'
                   }}
                 />
               </ListItemButton>
@@ -242,7 +231,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             alignItems: 'center', 
             gap: 1.5,
             p: 1.5,
-            borderRadius: 2,
+            borderRadius: '12px',
             bgcolor: 'rgba(255,255,255,0.05)',
             cursor: 'pointer',
             transition: 'background-color 0.2s',

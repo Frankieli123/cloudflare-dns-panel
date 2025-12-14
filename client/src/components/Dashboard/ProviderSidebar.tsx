@@ -100,7 +100,7 @@ export default function ProviderSidebar() {
             variant="outlined"
             onClick={() => hasAccounts && selectProvider(provider.type)}
             sx={{
-              mb: 1.5,
+              mb: 1,
               cursor: hasAccounts ? 'pointer' : 'not-allowed',
               opacity: hasAccounts ? 1 : 0.5,
               borderColor: isSelected ? config.color : 'divider',
@@ -109,24 +109,24 @@ export default function ProviderSidebar() {
               transition: 'all 0.2s ease',
               '&:hover': hasAccounts ? {
                 borderColor: config.color,
-                transform: 'translateX(4px)',
-                boxShadow: `0 4px 12px ${alpha(config.color, 0.15)}`,
+                bgcolor: alpha(config.color, 0.08),
+                boxShadow: `0 2px 8px ${alpha(config.color, 0.15)}`,
               } : {},
             }}
           >
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <CardContent sx={{ p: '10px 12px !important' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box
                   sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 2,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 1.5,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     bgcolor: alpha(config.color, 0.1),
                     color: config.color,
-                    '& svg': { fontSize: 24 },
+                    '& svg': { fontSize: 20 },
                   }}
                 >
                   {config.icon}
@@ -134,33 +134,16 @@ export default function ProviderSidebar() {
 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography
-                    variant="subtitle2"
+                    variant="body2"
                     fontWeight={600}
                     sx={{
                       color: isSelected ? config.color : 'text.primary',
+                      lineHeight: 1.2,
                     }}
                   >
                     {config.name}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {count > 0 ? `${count} 个账户` : '未配置'}
-                  </Typography>
                 </Box>
-
-                {count > 0 && (
-                  <Chip
-                    label={count}
-                    size="small"
-                    sx={{
-                      height: 24,
-                      minWidth: 24,
-                      bgcolor: isSelected ? config.color : alpha(theme.palette.text.primary, 0.08),
-                      color: isSelected ? 'white' : 'text.secondary',
-                      fontWeight: 600,
-                      '& .MuiChip-label': { px: 1 },
-                    }}
-                  />
-                )}
               </Box>
             </CardContent>
           </Card>

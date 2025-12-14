@@ -25,7 +25,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Storage as StorageIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  OpenInNew as OpenInNewIcon
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import {
@@ -39,6 +40,129 @@ import {
 import { DnsCredential, ProviderConfig, ProviderType } from '@/types/dns';
 import { useProvider } from '@/contexts/ProviderContext';
 import ProviderSelector, { getProviderIcon } from './ProviderSelector';
+
+// 各供应商获取凭证的方式说明
+const PROVIDER_CREDENTIAL_GUIDE: Record<ProviderType, { title: string; steps: string[]; link?: string }> = {
+  cloudflare: {
+    title: 'Cloudflare API Token 获取方式',
+    steps: [
+      '登录 Cloudflare Dashboard',
+      '点击右上角头像 → My Profile → API Tokens',
+      '点击 Create Token → 使用 Edit zone DNS 模板或自定义权限',
+      '复制生成的 API Token'
+    ],
+    link: 'https://dash.cloudflare.com/profile/api-tokens'
+  },
+  aliyun: {
+    title: '阿里云 AccessKey 获取方式',
+    steps: [
+      '登录阿里云控制台',
+      '点击右上角头像 → AccessKey 管理',
+      '创建 AccessKey 或使用已有的 AccessKey',
+      '建议创建 RAM 子账号并授予 DNS 相关权限'
+    ],
+    link: 'https://ram.console.aliyun.com/manage/ak'
+  },
+  dnspod: {
+    title: 'DNSPod API 密钥获取方式',
+    steps: [
+      '登录 DNSPod 控制台',
+      '进入 账号中心 → 密钥管理',
+      '创建新的 API 密钥',
+      '复制 SecretId 和 SecretKey'
+    ],
+    link: 'https://console.dnspod.cn/account/token/apikey'
+  },
+  huawei: {
+    title: '华为云 AccessKey 获取方式',
+    steps: [
+      '登录华为云控制台',
+      '点击右上角用户名 → 我的凭证',
+      '选择 访问密钥 → 新增访问密钥',
+      '下载并保存 AccessKey ID 和 Secret Access Key'
+    ],
+    link: 'https://console.huaweicloud.com/iam/#/myCredential'
+  },
+  baidu: {
+    title: '百度云 AccessKey 获取方式',
+    steps: [
+      '登录百度智能云控制台',
+      '点击右上角用户名 → 安全认证',
+      '在 Access Key 页面创建或查看密钥',
+      '复制 AccessKey 和 SecretKey'
+    ],
+    link: 'https://console.bce.baidu.com/iam/#/iam/accesslist'
+  },
+  west: {
+    title: '西部数码 API 密码获取方式',
+    steps: [
+      '登录西部数码会员中心',
+      '进入 账户安全 → API 密码设置',
+      '设置或查看 API 密码',
+      '使用会员账号和 API 密码进行认证'
+    ],
+    link: 'https://www.west.cn/manager/api/'
+  },
+  huoshan: {
+    title: '火山引擎 AccessKey 获取方式',
+    steps: [
+      '登录火山引擎控制台',
+      '点击右上角用户名 → 密钥管理',
+      '创建新的 Access Key',
+      '保存 AccessKey ID 和 Secret Access Key'
+    ],
+    link: 'https://console.volcengine.com/iam/keymanage/'
+  },
+  jdcloud: {
+    title: '京东云 AccessKey 获取方式',
+    steps: [
+      '登录京东云控制台',
+      '点击右上角账户 → Access Key 管理',
+      '创建新的 Access Key',
+      '复制 AccessKey ID 和 AccessKey Secret'
+    ],
+    link: 'https://uc.jdcloud.com/account/accesskey'
+  },
+  dnsla: {
+    title: 'DNSLA API 密钥获取方式',
+    steps: [
+      '登录 DNSLA 控制台',
+      '进入 用户中心 → API 接口',
+      '创建或查看 API ID 和 API Secret',
+      '复制 API ID 和 API Secret'
+    ],
+    link: 'https://www.dns.la/'
+  },
+  namesilo: {
+    title: 'NameSilo API Key 获取方式',
+    steps: [
+      '登录 NameSilo 账户',
+      '进入 Account → API Manager',
+      '生成新的 API Key',
+      '复制 API Key（注意保存，只显示一次）'
+    ],
+    link: 'https://www.namesilo.com/account/api-manager'
+  },
+  powerdns: {
+    title: 'PowerDNS API Key 获取方式',
+    steps: [
+      '登录 PowerDNS 服务器',
+      '查看配置文件中的 api-key 设置',
+      '或在 PowerDNS Admin 界面获取 API Key',
+      '填写服务器地址格式：IP:端口（如 192.168.1.1:8081）'
+    ]
+  },
+  spaceship: {
+    title: 'Spaceship API 密钥获取方式',
+    steps: [
+      '登录 Spaceship 账户',
+      '进入 Account Settings → API',
+      '生成 API Key 和 API Secret',
+      '复制 API Key 和 API Secret'
+    ],
+    link: 'https://www.spaceship.com/'
+  }
+};
 
 interface CredentialFormInputs {
   name: string;
@@ -381,7 +505,28 @@ export default function DnsCredentialManagement() {
               )}
 
               <Alert severity="info" sx={{ mt: 1 }}>
-                保存时将自动验证凭证有效性
+                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                  {PROVIDER_CREDENTIAL_GUIDE[selectedProviderType]?.title || '获取凭证'}
+                </Typography>
+                <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
+                  {PROVIDER_CREDENTIAL_GUIDE[selectedProviderType]?.steps.map((step, index) => (
+                    <Typography component="li" variant="body2" key={index} sx={{ mb: 0.5 }}>
+                      {step}
+                    </Typography>
+                  ))}
+                </Box>
+                {PROVIDER_CREDENTIAL_GUIDE[selectedProviderType]?.link && (
+                  <Button
+                    size="small"
+                    startIcon={<OpenInNewIcon />}
+                    href={PROVIDER_CREDENTIAL_GUIDE[selectedProviderType].link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ mt: 1, textTransform: 'none' }}
+                  >
+                    前往获取
+                  </Button>
+                )}
               </Alert>
             </Stack>
           </DialogContent>
