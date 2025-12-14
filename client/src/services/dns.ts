@@ -1,5 +1,13 @@
 import api from './api';
 import { ApiResponse, DNSRecord } from '@/types';
+import { DnsLine } from '@/types/dns';
+
+export interface RecordsResponseCapabilities {
+  supportsWeight?: boolean;
+  supportsLine?: boolean;
+  supportsStatus?: boolean;
+  supportsRemark?: boolean;
+}
 
 /**
  * 获取 DNS 记录列表
@@ -7,7 +15,7 @@ import { ApiResponse, DNSRecord } from '@/types';
 export const getDNSRecords = async (
   zoneId: string,
   credentialId?: number
-): Promise<ApiResponse<{ records: DNSRecord[] }>> => {
+): Promise<ApiResponse<{ records: DNSRecord[]; capabilities?: RecordsResponseCapabilities }>> => {
   const params = credentialId !== undefined ? { credentialId } : {};
 
   const response = await api.get(`/dns-records/zones/${zoneId}/records`, {
@@ -27,15 +35,35 @@ export const getDNSRecords = async (
     ttl: r.ttl,
     proxied: !!r.proxied,
     priority: r.priority,
+    weight: r.weight,
+    line: r.line,
+    lineName: r.lineName,
+    remark: r.remark,
+    enabled: r.enabled,
   }));
+
+  const capabilities = (response as any)?.data?.capabilities;
 
   return {
     ...(response as any),
     data: {
       ...(response as any)?.data,
       records,
+      capabilities,
     },
-  } as ApiResponse<{ records: DNSRecord[] }>;
+  } as ApiResponse<{ records: DNSRecord[]; capabilities?: RecordsResponseCapabilities }>;
+};
+
+/**
+ * 获取解析线路列表
+ */
+export const getDNSLines = async (
+  zoneId: string,
+  credentialId?: number
+): Promise<ApiResponse<{ lines: DnsLine[] }>> => {
+  const params = credentialId !== undefined ? { credentialId } : {};
+  const response = await api.get(`/dns-records/zones/${zoneId}/lines`, { params });
+  return response as unknown as ApiResponse<{ lines: DnsLine[] }>;
 };
 
 /**
@@ -50,6 +78,9 @@ export const createDNSRecord = async (
     ttl?: number;
     proxied?: boolean;
     priority?: number;
+    weight?: number;
+    line?: string;
+    remark?: string;
   },
   credentialId?: number
 ): Promise<ApiResponse<{ record: DNSRecord }>> => {
@@ -64,6 +95,9 @@ export const createDNSRecord = async (
       ttl: params.ttl,
       proxied: params.proxied,
       priority: params.priority,
+      weight: params.weight,
+      line: params.line,
+      remark: params.remark,
     },
     { params: queryParams }
   );
@@ -78,6 +112,11 @@ export const createDNSRecord = async (
         ttl: r.ttl,
         proxied: !!r.proxied,
         priority: r.priority,
+        weight: r.weight,
+        line: r.line,
+        lineName: r.lineName,
+        remark: r.remark,
+        enabled: r.enabled,
       }
     : null;
 
@@ -103,6 +142,9 @@ export const updateDNSRecord = async (
     ttl?: number;
     proxied?: boolean;
     priority?: number;
+    weight?: number;
+    line?: string;
+    remark?: string;
   },
   credentialId?: number
 ): Promise<ApiResponse<{ record: DNSRecord }>> => {
@@ -117,6 +159,9 @@ export const updateDNSRecord = async (
       ttl: params.ttl,
       proxied: params.proxied,
       priority: params.priority,
+      weight: params.weight,
+      line: params.line,
+      remark: params.remark,
     },
     { params: queryParams }
   );
@@ -131,6 +176,11 @@ export const updateDNSRecord = async (
         ttl: r.ttl,
         proxied: !!r.proxied,
         priority: r.priority,
+        weight: r.weight,
+        line: r.line,
+        lineName: r.lineName,
+        remark: r.remark,
+        enabled: r.enabled,
       }
     : null;
 
@@ -141,6 +191,19 @@ export const updateDNSRecord = async (
       record,
     },
   } as ApiResponse<{ record: DNSRecord }>;
+};
+
+/**
+ * 设置 DNS 记录状态
+ */
+export const setDNSRecordStatus = async (
+  zoneId: string,
+  recordId: string,
+  enabled: boolean,
+  credentialId?: number
+): Promise<ApiResponse> => {
+  const params = credentialId !== undefined ? { credentialId } : {};
+  return api.put(`/dns-records/zones/${zoneId}/records/${recordId}/status`, { enabled }, { params });
 };
 
 /**

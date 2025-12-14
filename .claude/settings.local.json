@@ -15,7 +15,10 @@
       "Bash(powershell:*)",
       "Bash(curl:*)",
       "Bash(dir /b /s *.config.*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(ls -la \"e:\\APP\\CF\\app\\lib\\dns\"\" 2>/dev/null || echo \"Directory check \")",
+      "Bash(find:*)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

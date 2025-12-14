@@ -14,30 +14,67 @@ import {
   MenuItem,
   Switch,
 } from '@mui/material';
-import { 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
-  Cloud as CloudIcon, 
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Cloud as CloudIcon,
   CloudQueue as CloudQueueIcon,
   Check as CheckIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  PowerSettingsNew as PowerIcon,
 } from '@mui/icons-material';
 import { DNSRecord } from '@/types';
+import { DnsLine, ProviderCapabilities } from '@/types/dns';
 import { formatTTL } from '@/utils/formatters';
-import { DNS_RECORD_TYPES, TTL_OPTIONS } from '@/utils/constants';
+import { TTL_OPTIONS } from '@/utils/constants';
+import { useProvider } from '@/contexts/ProviderContext';
 
 interface DNSRecordTableProps {
   records: DNSRecord[];
   onUpdate: (recordId: string, params: any) => void;
   onDelete: (recordId: string) => void;
+  onStatusChange?: (recordId: string, enabled: boolean) => void;
+  lines?: DnsLine[];
 }
 
 /**
  * DNS 记录表格组件
+ * 根据供应商能力动态显示字段
  */
-export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecordTableProps) {
+export default function DNSRecordTable({
+  records,
+  onUpdate,
+  onDelete,
+  onStatusChange,
+  lines = [],
+}: DNSRecordTableProps) {
+  const { selectedProvider, currentCapabilities } = useProvider();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<DNSRecord>>({});
+
+  // 根据供应商能力决定显示哪些列
+  const caps: ProviderCapabilities = currentCapabilities || {
+    supportsWeight: false,
+    supportsLine: false,
+    supportsStatus: false,
+    supportsRemark: false,
+    supportsUrlForward: false,
+    supportsLogs: false,
+    remarkMode: 'unsupported',
+    paging: 'client',
+    requiresDomainId: false,
+    recordTypes: ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'CAA', 'NS'],
+  };
+
+  const showProxied = selectedProvider === 'cloudflare';
+  const showWeight = caps.supportsWeight;
+  const showLine = caps.supportsLine;
+  const showStatus = caps.supportsStatus && !!onStatusChange;
+  const showRemark = caps.supportsRemark;
+  const recordTypes = caps.recordTypes;
+
+  // 计算动态列数
+  const columnCount = 5 + (showProxied ? 1 : 0) + (showWeight ? 1 : 0) + (showLine ? 1 : 0) + (showStatus ? 1 : 0) + (showRemark ? 1 : 0);
 
   const handleEditClick = (record: DNSRecord) => {
     setEditingId(record.id);
@@ -47,7 +84,10 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
       content: record.content,
       ttl: record.ttl,
       proxied: record.proxied,
-      priority: record.priority
+      priority: record.priority,
+      weight: record.weight,
+      line: record.line,
+      remark: record.remark,
     });
   };
 
@@ -66,6 +106,18 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleStatusToggle = (record: DNSRecord) => {
+    if (onStatusChange) {
+      onStatusChange(record.id, !record.enabled);
+    }
+  };
+
+  const getLineName = (lineCode?: string) => {
+    if (!lineCode) return '-';
+    const line = lines.find(l => l.code === lineCode);
+    return line?.name || lineCode;
+  };
+
   return (
     <Table sx={{ minWidth: 650 }}>
       <TableHead>
@@ -74,15 +126,19 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
           <TableCell>名称</TableCell>
           <TableCell sx={{ maxWidth: 300 }}>内容</TableCell>
           <TableCell>TTL</TableCell>
-          <TableCell align="center">代理状态</TableCell>
+          {showProxied && <TableCell align="center">代理状态</TableCell>}
           <TableCell>优先级</TableCell>
+          {showWeight && <TableCell>权重</TableCell>}
+          {showLine && <TableCell>线路</TableCell>}
+          {showRemark && <TableCell>备注</TableCell>}
+          {showStatus && <TableCell align="center">状态</TableCell>}
           <TableCell align="right">操作</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {records.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+            <TableCell colSpan={columnCount} align="center" sx={{ py: 8 }}>
               <Typography variant="body1" color="text.secondary">
                 暂无 DNS 记录
               </Typography>
@@ -91,7 +147,7 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
         ) : (
           records.map((record) => {
             const isEditing = editingId === record.id;
-            
+
             if (isEditing) {
               return (
                 <TableRow key={record.id} hover>
@@ -103,7 +159,7 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
                       onChange={(e) => handleChange('type', e.target.value)}
                       sx={{ minWidth: 80 }}
                     >
-                      {DNS_RECORD_TYPES.map((type) => (
+                      {recordTypes.map((type) => (
                         <MenuItem key={type} value={type}>{type}</MenuItem>
                       ))}
                     </TextField>
@@ -136,12 +192,14 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
                       ))}
                     </TextField>
                    </TableCell>
-                   <TableCell align="center">
-                    <Switch
-                      checked={!!editForm.proxied}
-                      onChange={(e) => handleChange('proxied', e.target.checked)}
-                    />
-                   </TableCell>
+                   {showProxied && (
+                     <TableCell align="center">
+                      <Switch
+                        checked={!!editForm.proxied}
+                        onChange={(e) => handleChange('proxied', e.target.checked)}
+                      />
+                     </TableCell>
+                   )}
                    <TableCell>
                      {(editForm.type === 'MX' || editForm.type === 'SRV') && (
                        <TextField
@@ -153,6 +211,45 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
                        />
                      )}
                    </TableCell>
+                   {showWeight && (
+                     <TableCell>
+                       <TextField
+                         type="number"
+                         size="small"
+                         value={editForm.weight ?? ''}
+                         onChange={(e) => handleChange('weight', e.target.value ? Number(e.target.value) : undefined)}
+                         sx={{ maxWidth: 80 }}
+                         placeholder="1-100"
+                       />
+                     </TableCell>
+                   )}
+                   {showLine && (
+                     <TableCell>
+                       <TextField
+                         select
+                         size="small"
+                         value={editForm.line || 'default'}
+                         onChange={(e) => handleChange('line', e.target.value)}
+                         sx={{ minWidth: 100 }}
+                       >
+                         {lines.map((line) => (
+                           <MenuItem key={line.code} value={line.code}>{line.name}</MenuItem>
+                         ))}
+                       </TextField>
+                     </TableCell>
+                   )}
+                   {showRemark && (
+                     <TableCell>
+                       <TextField
+                         size="small"
+                         value={editForm.remark || ''}
+                         onChange={(e) => handleChange('remark', e.target.value)}
+                         placeholder="备注"
+                         sx={{ minWidth: 100 }}
+                       />
+                     </TableCell>
+                   )}
+                   {showStatus && <TableCell />}
                    <TableCell align="right">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                       <IconButton size="small" onClick={() => handleSaveClick(record.id)} color="success">
@@ -168,17 +265,17 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
             }
 
             return (
-              <TableRow key={record.id} hover>
+              <TableRow key={record.id} hover sx={{ opacity: record.enabled === false ? 0.5 : 1 }}>
                 <TableCell>
-                  <Chip 
-                    label={record.type} 
-                    size="small" 
-                    sx={{ 
+                  <Chip
+                    label={record.type}
+                    size="small"
+                    sx={{
                       fontWeight: 'bold',
                       minWidth: 60,
                       bgcolor: (theme) => theme.palette.primary.main,
                       color: 'white'
-                    }} 
+                    }}
                   />
                 </TableCell>
                 <TableCell>
@@ -192,18 +289,42 @@ export default function DNSRecordTable({ records, onUpdate, onDelete }: DNSRecor
                   </Typography>
                 </TableCell>
                 <TableCell>{formatTTL(record.ttl)}</TableCell>
-                <TableCell align="center">
-                  {record.proxied ? (
-                    <Tooltip title="已开启 Cloudflare 代理">
-                      <CloudIcon color="warning" />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="仅 DNS 解析 (无代理)">
-                      <CloudQueueIcon color="disabled" />
-                    </Tooltip>
-                  )}
-                </TableCell>
+                {showProxied && (
+                  <TableCell align="center">
+                    {record.proxied ? (
+                      <Tooltip title="已开启 Cloudflare 代理">
+                        <CloudIcon color="warning" />
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="仅 DNS 解析 (无代理)">
+                        <CloudQueueIcon color="disabled" />
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>{record.priority || '-'}</TableCell>
+                {showWeight && <TableCell>{record.weight ?? '-'}</TableCell>}
+                {showLine && <TableCell>{record.lineName || getLineName(record.line)}</TableCell>}
+                {showRemark && (
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 120 }}>
+                      {record.remark || '-'}
+                    </Typography>
+                  </TableCell>
+                )}
+                {showStatus && (
+                  <TableCell align="center">
+                    <Tooltip title={record.enabled !== false ? '点击禁用' : '点击启用'}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleStatusToggle(record)}
+                        color={record.enabled !== false ? 'success' : 'default'}
+                      >
+                        <PowerIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                )}
                 <TableCell align="right">
                   <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                     <Tooltip title="编辑记录">

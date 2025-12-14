@@ -25,7 +25,7 @@ import {
   Dns as DnsIcon,
   Language as LanguageIcon
 } from '@mui/icons-material';
-import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord } from '@/services/dns';
+import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord, getDNSLines, setDNSRecordStatus } from '@/services/dns';
 import DNSRecordTable from '@/components/DNSRecordTable/DNSRecordTable';
 import QuickAddForm from '@/components/QuickAddForm/QuickAddForm';
 import { useProvider } from '@/contexts/ProviderContext';
@@ -39,20 +39,29 @@ export default function DomainDetail() {
   const queryClient = useQueryClient();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-  const { selectedCredentialId, selectedProvider, credentials } = useProvider();
+  const { selectedCredentialId, selectedProvider, credentials, currentCapabilities } = useProvider();
   const credentialId = typeof selectedCredentialId === 'number' ? selectedCredentialId : undefined;
   const credentialProvider = credentialId
     ? credentials.find(c => c.id === credentialId)?.provider
     : selectedProvider;
   const supportsCustomHostnames = credentialProvider === 'cloudflare';
+  const supportsLine = currentCapabilities?.supportsLine ?? false;
+  const supportsStatus = currentCapabilities?.supportsStatus ?? false;
 
   // 获取域名信息（这里假设从缓存或上一页传递，如果没有独立API，先简单处理）
   // 实际项目中可能需要单独获取域名详情的API，或者从 location state 获取
-  
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['dns-records', zoneId, credentialId],
     queryFn: () => getDNSRecords(zoneId!, credentialId),
     enabled: !!zoneId,
+  });
+
+  // 获取线路列表
+  const { data: linesData } = useQuery({
+    queryKey: ['dns-lines', zoneId, credentialId],
+    queryFn: () => getDNSLines(zoneId!, credentialId),
+    enabled: !!zoneId && supportsLine,
   });
 
   const createMutation = useMutation({
@@ -77,6 +86,14 @@ export default function DomainDetail() {
     },
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ recordId, enabled }: { recordId: string; enabled: boolean }) =>
+      setDNSRecordStatus(zoneId!, recordId, enabled, credentialId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId, credentialId] });
+    },
+  });
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -94,6 +111,7 @@ export default function DomainDetail() {
   }
 
   const records = data?.data?.records || [];
+  const lines = linesData?.data?.lines || [];
 
   return (
     <Box>
@@ -157,12 +175,14 @@ export default function DomainDetail() {
         <CardContent sx={{ p: 0 }}>
           <DNSRecordTable
             records={records}
+            lines={lines}
             onUpdate={(recordId, params) => updateMutation.mutate({ recordId, params })}
             onDelete={(recordId) => {
               if (window.confirm('确定要删除这条 DNS 记录吗？')) {
                 deleteMutation.mutate(recordId);
               }
             }}
+            onStatusChange={supportsStatus ? (recordId, enabled) => statusMutation.mutate({ recordId, enabled }) : undefined}
           />
         </CardContent>
       </Card>
@@ -187,6 +207,7 @@ export default function DomainDetail() {
           <QuickAddForm
             onSubmit={(params) => createMutation.mutate(params)}
             loading={createMutation.isPending}
+            lines={lines}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>

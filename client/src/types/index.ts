@@ -34,7 +34,9 @@ export type DNSRecordType =
   | 'SRV'
   | 'CAA'
   | 'NS'
-  | 'PTR';
+  | 'PTR'
+  | 'EXPLICIT_URL'
+  | 'IMPLICIT_URL';
 
 /**
  * DNS 记录
@@ -47,6 +49,11 @@ export interface DNSRecord {
   ttl: number;
   proxied: boolean;
   priority?: number;
+  weight?: number;
+  line?: string;
+  lineName?: string;
+  remark?: string;
+  enabled?: boolean;
 }
 
 /**

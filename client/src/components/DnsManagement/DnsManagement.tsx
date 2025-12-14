@@ -19,7 +19,7 @@ import {
   Dns as DnsIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
-import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord } from '@/services/dns';
+import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord, getDNSLines, setDNSRecordStatus } from '@/services/dns';
 import DNSRecordTable from '@/components/DNSRecordTable/DNSRecordTable';
 import QuickAddForm from '@/components/QuickAddForm/QuickAddForm';
 import CustomHostnameList, { CustomHostnameListRef } from '@/components/CustomHostnameList/CustomHostnameList';
@@ -36,11 +36,13 @@ interface DnsManagementProps {
  */
 export default function DnsManagement({ zoneId, credentialId }: DnsManagementProps) {
   const [activeTab, setActiveTab] = useState(0);
-  const { selectedProvider, credentials } = useProvider();
+  const { selectedProvider, credentials, currentCapabilities } = useProvider();
   const credentialProvider = typeof credentialId === 'number'
     ? credentials.find(c => c.id === credentialId)?.provider
     : selectedProvider;
   const supportsCustomHostnames = credentialProvider === 'cloudflare';
+  const supportsLine = currentCapabilities?.supportsLine ?? false;
+  const supportsStatus = currentCapabilities?.supportsStatus ?? false;
   const customHostnameListRef = useRef<CustomHostnameListRef>(null);
 
   const queryClient = useQueryClient();
@@ -50,6 +52,13 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
     queryKey: ['dns-records', zoneId, credentialId],
     queryFn: () => getDNSRecords(zoneId, credentialId),
     enabled: !!zoneId,
+  });
+
+  // 获取线路列表
+  const { data: linesData } = useQuery({
+    queryKey: ['dns-lines', zoneId, credentialId],
+    queryFn: () => getDNSLines(zoneId, credentialId),
+    enabled: !!zoneId && supportsLine,
   });
 
   const createMutation = useMutation({
@@ -74,6 +83,14 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
     },
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ recordId, enabled }: { recordId: string; enabled: boolean }) =>
+      setDNSRecordStatus(zoneId, recordId, enabled, credentialId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dns-records', zoneId, credentialId] });
+    },
+  });
+
   useEffect(() => {
     if (!supportsCustomHostnames && activeTab !== 0) {
       setActiveTab(0);
@@ -85,6 +102,7 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
   };
 
   const records = data?.data?.records || [];
+  const lines = linesData?.data?.lines || [];
 
   return (
     <Box sx={{ py: 2, px: 6, bgcolor: 'background.default' }}>
@@ -140,12 +158,14 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
           ) : (
             <DNSRecordTable
               records={records}
+              lines={lines}
               onUpdate={(recordId, params) => updateMutation.mutate({ recordId, params })}
               onDelete={(recordId) => {
                 if (window.confirm('确定要删除这条 DNS 记录吗？')) {
                   deleteMutation.mutate(recordId);
                 }
               }}
+              onStatusChange={supportsStatus ? (recordId, enabled) => statusMutation.mutate({ recordId, enabled }) : undefined}
             />
           )}
 
@@ -169,6 +189,7 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
               <QuickAddForm
                 onSubmit={(params) => createMutation.mutate(params)}
                 loading={createMutation.isPending}
+                lines={lines}
               />
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 3 }}>

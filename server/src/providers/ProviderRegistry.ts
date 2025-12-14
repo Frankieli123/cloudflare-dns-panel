@@ -7,6 +7,15 @@ import { decrypt } from '../utils/encryption';
 import { CloudflareProvider, CLOUDFLARE_CAPABILITIES } from './cloudflare';
 import { AliyunProvider, ALIYUN_CAPABILITIES } from './aliyun';
 import { DnspodProvider, DNSPOD_CAPABILITIES } from './dnspod';
+import { HuaweiProvider, HUAWEI_CAPABILITIES } from './huawei';
+import { BaiduProvider, BAIDU_CAPABILITIES } from './baidu';
+import { WestProvider, WEST_CAPABILITIES } from './west';
+import { HuoshanProvider, HUOSHAN_CAPABILITIES } from './huoshan';
+import { JdcloudProvider, JDCLOUD_CAPABILITIES } from './jdcloud';
+import { DnslaProvider, DNSLA_CAPABILITIES } from './dnsla';
+import { NamesiloProvider, NAMESILO_CAPABILITIES } from './namesilo';
+import { PowerdnsProvider, POWERDNS_CAPABILITIES } from './powerdns';
+import { SpaceshipProvider, SPACESHIP_CAPABILITIES } from './spaceship';
 import {
   IDnsProvider,
   ProviderCapabilities,
@@ -48,6 +57,15 @@ export class ProviderRegistry {
     [ProviderType.CLOUDFLARE]: CloudflareProvider,
     [ProviderType.ALIYUN]: AliyunProvider,
     [ProviderType.DNSPOD]: DnspodProvider,
+    [ProviderType.HUAWEI]: HuaweiProvider,
+    [ProviderType.BAIDU]: BaiduProvider,
+    [ProviderType.WEST]: WestProvider,
+    [ProviderType.HUOSHAN]: HuoshanProvider,
+    [ProviderType.JDCLOUD]: JdcloudProvider,
+    [ProviderType.DNSLA]: DnslaProvider,
+    [ProviderType.NAMESILO]: NamesiloProvider,
+    [ProviderType.POWERDNS]: PowerdnsProvider,
+    [ProviderType.SPACESHIP]: SpaceshipProvider,
   };
 
   /**
@@ -57,6 +75,15 @@ export class ProviderRegistry {
     [ProviderType.CLOUDFLARE]: CLOUDFLARE_CAPABILITIES,
     [ProviderType.ALIYUN]: ALIYUN_CAPABILITIES,
     [ProviderType.DNSPOD]: DNSPOD_CAPABILITIES,
+    [ProviderType.HUAWEI]: HUAWEI_CAPABILITIES,
+    [ProviderType.BAIDU]: BAIDU_CAPABILITIES,
+    [ProviderType.WEST]: WEST_CAPABILITIES,
+    [ProviderType.HUOSHAN]: HUOSHAN_CAPABILITIES,
+    [ProviderType.JDCLOUD]: JDCLOUD_CAPABILITIES,
+    [ProviderType.DNSLA]: DNSLA_CAPABILITIES,
+    [ProviderType.NAMESILO]: NAMESILO_CAPABILITIES,
+    [ProviderType.POWERDNS]: POWERDNS_CAPABILITIES,
+    [ProviderType.SPACESHIP]: SPACESHIP_CAPABILITIES,
   };
 
   /**

@@ -26,6 +26,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-rate-limit": "^7.4.1",
+    "iconv-lite": "^0.6.3",
     "jsonwebtoken": "^9.0.2",
     "node-cache": "^5.1.2"
   },

@@ -1,12 +1,22 @@
 import api from './api';
 import { ApiResponse } from '@/types';
-import { DnsCredential, ProviderConfig, DnsCredentialSecrets, ProviderType } from '@/types/dns';
+import { DnsCredential, ProviderConfig, DnsCredentialSecrets, ProviderType, ProviderCapabilities } from '@/types/dns';
 
 type ProviderCapabilitiesApi = {
   provider?: ProviderType;
   type?: ProviderType;
   name: string;
   icon?: string;
+  supportsWeight?: boolean;
+  supportsLine?: boolean;
+  supportsStatus?: boolean;
+  supportsRemark?: boolean;
+  supportsUrlForward?: boolean;
+  supportsLogs?: boolean;
+  remarkMode?: 'inline' | 'separate' | 'unsupported';
+  paging?: 'server' | 'client';
+  requiresDomainId?: boolean;
+  recordTypes?: string[];
   authFields: Array<{
     name?: string;
     key?: string;
@@ -30,6 +40,19 @@ export async function getProviders(): Promise<ApiResponse<{ providers: ProviderC
       const type = p.type || p.provider;
       if (!type) return null;
 
+      const capabilities: ProviderCapabilities = {
+        supportsWeight: p.supportsWeight ?? false,
+        supportsLine: p.supportsLine ?? false,
+        supportsStatus: p.supportsStatus ?? false,
+        supportsRemark: p.supportsRemark ?? false,
+        supportsUrlForward: p.supportsUrlForward ?? false,
+        supportsLogs: p.supportsLogs ?? false,
+        remarkMode: p.remarkMode ?? 'unsupported',
+        paging: p.paging ?? 'client',
+        requiresDomainId: p.requiresDomainId ?? false,
+        recordTypes: p.recordTypes ?? ['A', 'AAAA', 'CNAME', 'MX', 'TXT'],
+      };
+
       const normalized: ProviderConfig = {
         type,
         name: p.name,
@@ -41,6 +64,7 @@ export async function getProviders(): Promise<ApiResponse<{ providers: ProviderC
           required: f.required,
           helpText: f.helpText,
         })),
+        capabilities,
       };
 
       if (p.icon) {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { DnsCredential, ProviderConfig, ProviderType } from '@/types/dns';
+import { DnsCredential, ProviderConfig, ProviderType, ProviderCapabilities } from '@/types/dns';
 import { getDnsCredentials, getProviders } from '@/services/dnsCredentials';
 
 interface ProviderContextType {
@@ -14,6 +14,8 @@ interface ProviderContextType {
   refreshData: () => Promise<void>;
   getCredentialsByProvider: (provider: ProviderType) => DnsCredential[];
   getCredentialCountByProvider: (provider: ProviderType) => number;
+  getProviderCapabilities: (provider?: ProviderType | null) => ProviderCapabilities | null;
+  currentCapabilities: ProviderCapabilities | null;
 }
 
 const ProviderContext = createContext<ProviderContextType | undefined>(undefined);
@@ -130,6 +132,15 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     return credentials.filter(c => c.provider === provider).length;
   }, [credentials]);
 
+  const getProviderCapabilities = useCallback((provider?: ProviderType | null): ProviderCapabilities | null => {
+    const p = provider ?? selectedProvider;
+    if (!p) return null;
+    const config = providers.find(c => c.type === p);
+    return config?.capabilities ?? null;
+  }, [providers, selectedProvider]);
+
+  const currentCapabilities = getProviderCapabilities(selectedProvider);
+
   return (
     <ProviderContext.Provider
       value={{
@@ -144,6 +155,8 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
         refreshData: loadData,
         getCredentialsByProvider,
         getCredentialCountByProvider,
+        getProviderCapabilities,
+        currentCapabilities,
       }}
     >
       {children}

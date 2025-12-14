@@ -1,4 +1,16 @@
-export type ProviderType = 'cloudflare' | 'aliyun' | 'dnspod';
+export type ProviderType =
+  | 'cloudflare'
+  | 'aliyun'
+  | 'dnspod'
+  | 'huawei'
+  | 'baidu'
+  | 'west'
+  | 'huoshan'
+  | 'jdcloud'
+  | 'dnsla'
+  | 'namesilo'
+  | 'powerdns'
+  | 'spaceship';
 
 export interface DnsCredential {
   id: number;
@@ -11,11 +23,28 @@ export interface DnsCredential {
   updatedAt: string;
 }
 
+/**
+ * 供应商能力配置
+ */
+export interface ProviderCapabilities {
+  supportsWeight: boolean;
+  supportsLine: boolean;
+  supportsStatus: boolean;
+  supportsRemark: boolean;
+  supportsUrlForward: boolean;
+  supportsLogs: boolean;
+  remarkMode: 'inline' | 'separate' | 'unsupported';
+  paging: 'server' | 'client';
+  requiresDomainId: boolean;
+  recordTypes: string[];
+}
+
 export interface ProviderConfig {
   type: ProviderType;
   name: string;
   icon?: string;
   authFields: AuthField[];
+  capabilities?: ProviderCapabilities;
 }
 
 export interface AuthField {
@@ -25,6 +54,15 @@ export interface AuthField {
   placeholder?: string;
   required: boolean;
   helpText?: string;
+}
+
+/**
+ * DNS线路
+ */
+export interface DnsLine {
+  code: string;
+  name: string;
+  parentCode?: string;
 }
 
 export type DnsCredentialSecrets = Record<string, string>;
