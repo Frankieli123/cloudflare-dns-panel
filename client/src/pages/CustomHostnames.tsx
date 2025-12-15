@@ -26,13 +26,15 @@ import {
   Stack,
   IconButton,
   Tooltip,
+  InputAdornment,
 } from '@mui/material';
-import { 
-  Add as AddIcon, 
-  Delete as DeleteIcon, 
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
   NavigateNext as NavigateNextIcon,
-  Language as LanguageIcon
+  Language as LanguageIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { getCustomHostnames, createCustomHostname, deleteCustomHostname } from '@/services/hostnames';
 import { formatDateTime } from '@/utils/formatters';
@@ -48,6 +50,7 @@ export default function CustomHostnames() {
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [hostname, setHostname] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const { selectedCredentialId } = useProvider();
   const credParam = new URLSearchParams(location.search).get('credentialId');
@@ -170,6 +173,16 @@ export default function CustomHostnames() {
 
   const hostnames = data?.data?.hostnames || [];
 
+  const filteredHostnames = searchKeyword.trim()
+    ? hostnames.filter((item: any) => {
+        const keyword = searchKeyword.toLowerCase();
+        return (
+          item.hostname?.toLowerCase().includes(keyword) ||
+          item.ssl?.status?.toLowerCase().includes(keyword)
+        );
+      })
+    : hostnames;
+
   const getSSLStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -185,36 +198,23 @@ export default function CustomHostnames() {
 
   return (
     <Box>
-      {/* 顶部导航 */}
-      <Box sx={{ mb: 4 }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={() => navigate('/')} size="small">
-            <ArrowBackIcon />
-          </IconButton>
-          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-            <Link 
-              underline="hover" 
-              color="inherit" 
-              onClick={() => navigate('/')}
-              sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-            >
-              仪表盘
-            </Link>
-            <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-              自定义主机名
-            </Typography>
-          </Breadcrumbs>
-        </Stack>
-
+      {/* 顶部操作栏 */}
+      <Box sx={{ mb: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              自定义主机名
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-              管理您的 Custom Hostnames 配置
-            </Typography>
-          </Box>
+          <TextField
+            size="small"
+            placeholder="搜索主机名..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            sx={{ width: 240 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -240,7 +240,7 @@ export default function CustomHostnames() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {hostnames.length === 0 ? (
+                {filteredHostnames.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                        <Typography variant="body1" color="text.secondary">
@@ -249,7 +249,7 @@ export default function CustomHostnames() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  hostnames.map((item: any) => (
+                  filteredHostnames.map((item: any) => (
                     <TableRow key={item.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="500">

@@ -14,11 +14,14 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Dns as DnsIcon,
-  Language as LanguageIcon
+  Language as LanguageIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord, getDNSLines, getDNSMinTTL, setDNSRecordStatus } from '@/services/dns';
 import { getDomainById } from '@/services/domains';
@@ -37,6 +40,7 @@ export default function DomainDetail() {
   const queryClient = useQueryClient();
   const { setLabel } = useBreadcrumb();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const { selectedCredentialId, selectedProvider, credentials, getProviderCapabilities } = useProvider();
   const credParam = new URLSearchParams(location.search).get('credentialId');
@@ -149,19 +153,36 @@ export default function DomainDetail() {
   const minTTL = minTtlData?.data?.minTTL;
   const domainName = domainData?.data?.domain?.name || 'DNS 记录';
 
+  const filteredRecords = searchKeyword.trim()
+    ? records.filter((r: any) => {
+        const keyword = searchKeyword.toLowerCase();
+        return (
+          r.name?.toLowerCase().includes(keyword) ||
+          r.content?.toLowerCase().includes(keyword) ||
+          r.type?.toLowerCase().includes(keyword)
+        );
+      })
+    : records;
+
   return (
     <Box>
-      {/* 顶部导航 */}
-      <Box sx={{ mb: 4 }}>
+      {/* 顶部操作栏 */}
+      <Box sx={{ mb: 2 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              {domainName}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-              管理当前域名的解析记录
-            </Typography>
-          </Box>
+          <TextField
+            size="small"
+            placeholder="搜索记录..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            sx={{ width: 240 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
           <Stack direction="row" spacing={2}>
             {supportsCustomHostnames && (
               <Button
@@ -189,7 +210,7 @@ export default function DomainDetail() {
       <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         <CardContent sx={{ p: 0 }}>
           <DNSRecordTable
-            records={records}
+            records={filteredRecords}
             lines={lines}
             minTTL={minTTL}
             stickyBodyBgColor="#ffffff"
