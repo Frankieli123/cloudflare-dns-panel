@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Table,
   TableContainer,
@@ -55,6 +55,30 @@ export default function DNSRecordTable({
   const { selectedProvider, currentCapabilities } = useProvider();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<DNSRecord>>({});
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 检测是否有内容被遮挡
+  const checkOverflow = useCallback(() => {
+    const el = containerRef.current;
+    if (el) {
+      const isOverflowing = el.scrollWidth > el.clientWidth;
+      const isScrolledLeft = el.scrollLeft > 0;
+      setHasOverflow(isOverflowing && (el.scrollLeft < el.scrollWidth - el.clientWidth));
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    checkOverflow();
+    el.addEventListener('scroll', checkOverflow);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      el.removeEventListener('scroll', checkOverflow);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [checkOverflow, records]);
 
   const compactTextFieldSx = {
     '& .MuiInputBase-root': {
@@ -69,6 +93,17 @@ export default function DNSRecordTable({
       paddingTop: '6px',
       paddingBottom: '6px',
     },
+  };
+
+  // 固定操作列样式 - 只在有内容被遮挡时显示阴影
+  const stickyActionCellSx = {
+    position: 'sticky',
+    right: 0,
+    bgcolor: 'inherit',
+    ...(hasOverflow && {
+      boxShadow: '-4px 0 8px -4px rgba(0,0,0,0.15)',
+    }),
+    zIndex: 1,
   };
 
   // 根据供应商能力决定显示哪些列
@@ -172,7 +207,7 @@ export default function DNSRecordTable({
   });
 
   return (
-    <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+    <TableContainer ref={containerRef} sx={{ width: '100%', overflowX: 'auto', maxWidth: '100%' }}>
       <Table sx={{ minWidth: minTableWidth, '& .MuiTableCell-root': { whiteSpace: 'nowrap' } }}>
         <TableHead>
           <TableRow>
@@ -186,7 +221,7 @@ export default function DNSRecordTable({
             {showLine && <TableCell>线路</TableCell>}
             {showRemark && <TableCell>备注</TableCell>}
             {showStatus && <TableCell align="center">状态</TableCell>}
-            <TableCell align="right">操作</TableCell>
+            <TableCell align="right" sx={stickyActionCellSx}>操作</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -341,7 +376,7 @@ export default function DNSRecordTable({
                      </TableCell>
                    )}
                    {showStatus && <TableCell />}
-                   <TableCell align="right">
+                   <TableCell align="right" sx={stickyActionCellSx}>
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                       <IconButton size="small" onClick={() => handleSaveClick(record.id)} color="success">
                         <CheckIcon />
@@ -418,7 +453,7 @@ export default function DNSRecordTable({
                     </Tooltip>
                   </TableCell>
                 )}
-                <TableCell align="right">
+                <TableCell align="right" sx={stickyActionCellSx}>
                   <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                     <Tooltip title="编辑记录">
                       <IconButton

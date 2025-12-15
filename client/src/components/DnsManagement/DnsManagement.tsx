@@ -127,7 +127,7 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
   const minTTL = minTtlData?.data?.minTTL;
 
   return (
-    <Box sx={{ py: 2, px: 6, bgcolor: 'background.default' }}>
+    <Box sx={{ py: 2, px: 6, bgcolor: 'background.default', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 0 }}>
           <Tab label="DNS 记录" />

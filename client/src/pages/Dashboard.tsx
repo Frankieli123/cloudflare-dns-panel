@@ -206,8 +206,8 @@ export default function Dashboard() {
               <Typography variant="body1">请在左侧选择一个 DNS 提供商以查看域名</Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table sx={{ minWidth: 650 }}>
+            <TableContainer sx={{ overflowX: 'visible' }}>
+              <Table sx={{ minWidth: 650, tableLayout: 'fixed' }}>
                 <TableHead>
                   <TableRow>
                     <TableCell width={50} />
