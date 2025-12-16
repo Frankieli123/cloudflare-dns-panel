@@ -9,7 +9,7 @@ interface ProviderContextType {
   selectedCredentialId: number | 'all' | null;
   isLoading: boolean;
   error: string | null;
-  selectProvider: (provider: ProviderType) => void;
+  selectProvider: (provider: ProviderType | null) => void;
   selectCredential: (id: number | 'all') => void;
   refreshData: () => Promise<void>;
   getCredentialsByProvider: (provider: ProviderType) => DnsCredential[];
@@ -103,7 +103,15 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     loadData();
   }, [loadData]);
 
-  const selectProvider = useCallback((provider: ProviderType) => {
+  const selectProvider = useCallback((provider: ProviderType | null) => {
+    if (provider === null) {
+      setSelectedProvider(null);
+      setSelectedCredentialId(null);
+      localStorage.removeItem(STORAGE_KEY_PROVIDER);
+      localStorage.removeItem(STORAGE_KEY_CREDENTIAL);
+      return;
+    }
+
     const credsForProvider = credentials.filter(c => c.provider === provider);
     const nextCredential = credsForProvider.length > 1
       ? 'all'

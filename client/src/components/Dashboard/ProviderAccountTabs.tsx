@@ -1,16 +1,27 @@
 import { Box, Tabs, Tab, Skeleton, alpha } from '@mui/material';
+import type { SyntheticEvent } from 'react';
 import {
   Apps as AllIcon,
   AccountCircle as AccountIcon,
 } from '@mui/icons-material';
 import { useProvider } from '@/contexts/ProviderContext';
+import { getProviderIcon } from '@/components/Settings/ProviderSelector';
 
-export default function ProviderAccountTabs() {
+export default function ProviderAccountTabs({
+  mode = 'provider',
+  value,
+  onChange,
+}: {
+  mode?: 'provider' | 'all';
+  value?: number | 'all' | null;
+  onChange?: (id: number | 'all') => void;
+}) {
   const {
     selectedProvider,
     selectedCredentialId,
     selectCredential,
     getCredentialsByProvider,
+    credentials,
     isLoading,
   } = useProvider();
 
@@ -22,24 +33,32 @@ export default function ProviderAccountTabs() {
     );
   }
 
-  if (!selectedProvider) {
+  if (mode === 'provider' && !selectedProvider) {
     return null;
   }
 
-  const accounts = getCredentialsByProvider(selectedProvider);
+  const accounts = mode === 'all'
+    ? credentials
+    : selectedProvider
+      ? getCredentialsByProvider(selectedProvider)
+      : [];
 
   if (accounts.length === 0) {
     return null;
   }
 
-  const handleChange = (_event: React.SyntheticEvent, newValue: number | 'all') => {
-    selectCredential(newValue);
+  const handleChange = (_event: SyntheticEvent, newValue: number | 'all') => {
+    if (onChange) {
+      onChange(newValue);
+    } else {
+      selectCredential(newValue);
+    }
   };
 
   return (
     <Box sx={{ width: '100%', bgcolor: 'background.paper', pt: 1 }}>
       <Tabs
-        value={selectedCredentialId || 'all'}
+        value={(value ?? selectedCredentialId) || 'all'}
         onChange={handleChange}
         variant="scrollable"
         scrollButtons="auto"
@@ -76,15 +95,22 @@ export default function ProviderAccountTabs() {
           iconPosition="start"
         />
 
-        {accounts.map((account) => (
-          <Tab
-            key={account.id}
-            value={account.id}
-            label={account.name}
-            icon={<AccountIcon fontSize="small" />}
-            iconPosition="start"
-          />
-        ))}
+        {accounts.map((account) => {
+          const label = account.name;
+          const icon = mode === 'all'
+            ? getProviderIcon(account.provider, 'small')
+            : <AccountIcon fontSize="small" />;
+
+          return (
+            <Tab
+              key={account.id}
+              value={account.id}
+              label={label}
+              icon={icon}
+              iconPosition="start"
+            />
+          );
+        })}
       </Tabs>
     </Box>
   );

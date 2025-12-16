@@ -22,6 +22,12 @@ import {
   Tooltip,
   Collapse,
   Grid,
+  useTheme,
+  useMediaQuery,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
 } from '@mui/material';
 import { 
   Delete as DeleteIcon, 
@@ -29,7 +35,8 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
   ContentCopy as ContentCopyIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { 
   getCustomHostnames, 
@@ -48,14 +55,17 @@ export interface CustomHostnameListRef {
 interface CustomHostnameListProps {
   zoneId: string;
   credentialId?: number;
+  filterKeyword?: string;
 }
 
 /**
  * Component for managing Custom Hostnames for a specific domain.
  * Designed to be used within the DnsManagement tabbed view.
  */
-const CustomHostnameList = forwardRef<CustomHostnameListRef, CustomHostnameListProps>(({ zoneId, credentialId }, ref) => {
+const CustomHostnameList = forwardRef<CustomHostnameListRef, CustomHostnameListProps>(({ zoneId, credentialId, filterKeyword }, ref) => {
   const queryClient = useQueryClient();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showFallbackDialog, setShowFallbackDialog] = useState(false);
   const [hostname, setHostname] = useState('');
@@ -176,7 +186,16 @@ const CustomHostnameList = forwardRef<CustomHostnameListRef, CustomHostnameListP
     );
   }
 
-  const hostnames = hostnamesData?.data?.hostnames || [];
+  const allHostnames = hostnamesData?.data?.hostnames || [];
+  const hostnames = filterKeyword?.trim()
+    ? allHostnames.filter((item: any) => {
+        const keyword = filterKeyword.toLowerCase();
+        return (
+          item.hostname?.toLowerCase().includes(keyword) ||
+          item.ssl?.status?.toLowerCase().includes(keyword)
+        );
+      })
+    : allHostnames;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -204,172 +223,313 @@ const CustomHostnameList = forwardRef<CustomHostnameListRef, CustomHostnameListP
     }
   };
 
-  return (
-    <Box>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow>
-            <TableCell width={50} />
-            <TableCell>主机名</TableCell>
-            <TableCell>状态</TableCell>
-            <TableCell>SSL 状态</TableCell>
-            <TableCell>验证方法</TableCell>
-            <TableCell>创建时间</TableCell>
-            <TableCell align="right">操作</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {hostnames.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                 <Typography variant="body1" color="text.secondary">
-                  暂无自定义主机名
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ) : (
-            hostnames.map((item: any) => (
-              <>
-                <TableRow 
-                  key={item.id} 
-                  hover 
-                  onClick={() => handleExpandClick(item.id)}
-                  sx={{ cursor: 'pointer', '& > *': { borderBottom: 'unset' } }}
-                >
-                  <TableCell>
-                    <IconButton size="small">
-                      {expandedId === item.id ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                    </IconButton>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight="500">
-                      {item.hostname}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item.status || 'unknown'}
-                      color={getStatusColor(item.status) as any}
-                      size="small"
-                      sx={{ fontWeight: 'bold', height: 24 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item.ssl?.status || '未知'}
-                      color={getSSLStatusColor(item.ssl?.status) as any}
-                      size="small"
-                      sx={{ fontWeight: 'bold', height: 24 }}
-                    />
-                  </TableCell>
-                  <TableCell>{item.ssl?.method?.toUpperCase() || '-'}</TableCell>
-                  <TableCell>{formatDateTime(item.created_at)}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="删除主机名">
-                      <IconButton
+  const renderMobileView = () => (
+    <Stack spacing={2}>
+      {hostnames.length === 0 ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, color: 'text.secondary' }}>
+           <Typography variant="body2">暂无自定义主机名</Typography>
+        </Box>
+      ) : (
+        hostnames.map((item: any) => {
+          const isExpanded = expandedId === item.id;
+          
+          return (
+            <Card key={item.id} variant="outlined" sx={{ borderRadius: 2 }}>
+              <CardContent sx={{ p: 2, pb: 1, '&:last-child': { pb: 1 } }}>
+                <Box onClick={() => handleExpandClick(item.id)} sx={{ cursor: 'pointer' }}>
+                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="600" sx={{ wordBreak: 'break-all' }}>
+                        {item.hostname}
+                      </Typography>
+                      <IconButton 
                         size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(item.id);
-                        }}
-                        sx={{ color: 'error.main' }}
+                        sx={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
                       >
-                        <DeleteIcon fontSize="small" />
+                         <ExpandMoreIcon />
                       </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
-                    <Collapse in={expandedId === item.id} timeout="auto" unmountOnExit>
-                      <Box sx={{ py: 2, px: 5 }}>
-                        {item.ssl?.validation_records ? (
-                          item.ssl.validation_records.map((record: any, index: number) => (
-                            <Box key={index} sx={{ mb: 2 }}>
-                              <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary">
-                                证书验证 (TXT)
-                              </Typography>
-                              <Grid container spacing={4}>
-                                <Grid item xs={12} md={5}>
+                   </Stack>
+                   
+                   <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                     <Chip
+                        label={item.status || 'unknown'}
+                        color={getStatusColor(item.status) as any}
+                        size="small"
+                        sx={{ fontWeight: 'bold', height: 20, fontSize: '0.7rem' }}
+                      />
+                      <Chip
+                        label={`SSL: ${item.ssl?.status || '未知'}`}
+                        color={getSSLStatusColor(item.ssl?.status) as any}
+                        size="small"
+                        sx={{ fontWeight: 'bold', height: 20, fontSize: '0.7rem' }}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                         {item.ssl?.method?.toUpperCase() || '-'}
+                      </Typography>
+                   </Stack>
+                </Box>
+
+                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ mt: 1 }}>
+                     {item.ssl?.validation_records ? (
+                        item.ssl.validation_records.map((record: any, index: number) => (
+                          <Box key={index} sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary" fontSize="0.8rem">
+                              证书验证 (TXT)
+                            </Typography>
+                            <Stack spacing={1}>
+                                <Box>
                                   <Typography variant="caption" color="text.secondary">TXT 名称</Typography>
                                   <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                    <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem" sx={{ wordBreak: 'break-all' }}>
                                       {record.txt_name}
                                     </Typography>
-                                    <Tooltip title="复制">
-                                      <IconButton size="small" onClick={() => handleCopy(record.txt_name)}>
-                                        <ContentCopyIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
+                                    <IconButton size="small" onClick={() => handleCopy(record.txt_name)} sx={{ p: 0.5 }}>
+                                      <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
                                   </Stack>
-                                </Grid>
-                                <Grid item xs={12} md={7}>
+                                </Box>
+                                <Box>
                                   <Typography variant="caption" color="text.secondary">TXT 值</Typography>
                                   <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                    <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem" sx={{ wordBreak: 'break-all' }}>
                                       {record.txt_value}
                                     </Typography>
-                                    <Tooltip title="复制">
-                                      <IconButton size="small" onClick={() => handleCopy(record.txt_value)}>
-                                        <ContentCopyIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
+                                    <IconButton size="small" onClick={() => handleCopy(record.txt_value)} sx={{ p: 0.5 }}>
+                                      <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                    </IconButton>
                                   </Stack>
-                                </Grid>
-                              </Grid>
-                            </Box>
-                          ))
-                        ) : (
-                          <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                            无需验证或已完成验证
-                          </Typography>
-                        )}
-                        
-                        {/* 所有的权验证 */}
-                        {item.ownership_verification && (
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary">
-                              所有权验证 ({item.ownership_verification.type.toUpperCase()})
-                            </Typography>
-                            <Grid container spacing={4}>
-                                <Grid item xs={12} md={5}>
-                                  <Typography variant="caption" color="text.secondary">名称</Typography>
-                                  <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
-                                      {item.ownership_verification.name}
-                                    </Typography>
-                                    <Tooltip title="复制">
-                                      <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.name)}>
-                                        <ContentCopyIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </Stack>
-                                </Grid>
-                                <Grid item xs={12} md={7}>
-                                  <Typography variant="caption" color="text.secondary">值</Typography>
-                                  <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
-                                      {item.ownership_verification.value}
-                                    </Typography>
-                                    <Tooltip title="复制">
-                                      <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.value)}>
-                                        <ContentCopyIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </Stack>
-                                </Grid>
-                              </Grid>
+                                </Box>
+                            </Stack>
                           </Box>
-                        )}
-                      </Box>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                        ))
+                      ) : (
+                        <Typography variant="caption" color="text.secondary" sx={{ py: 1, display: 'block' }}>
+                          无需验证或已完成验证
+                        </Typography>
+                      )}
+                      
+                      {item.ownership_verification && (
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary" fontSize="0.8rem">
+                            所有权验证 ({item.ownership_verification.type.toUpperCase()})
+                          </Typography>
+                          <Stack spacing={1}>
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">名称</Typography>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem" sx={{ wordBreak: 'break-all' }}>
+                                    {item.ownership_verification.name}
+                                  </Typography>
+                                  <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.name)} sx={{ p: 0.5 }}>
+                                    <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                  </IconButton>
+                                </Stack>
+                              </Box>
+                              <Box>
+                                <Typography variant="caption" color="text.secondary">值</Typography>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem" sx={{ wordBreak: 'break-all' }}>
+                                    {item.ownership_verification.value}
+                                  </Typography>
+                                  <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.value)} sx={{ p: 0.5 }}>
+                                    <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                  </IconButton>
+                                </Stack>
+                              </Box>
+                          </Stack>
+                        </Box>
+                      )}
+                  </Box>
+                </Collapse>
+
+              </CardContent>
+              <Divider sx={{ borderStyle: 'dashed' }} />
+              <CardActions sx={{ justifyContent: 'flex-end', px: 2, pt: 0.5, pb: 0.5 }}>
+                <Button 
+                   size="small" 
+                   startIcon={<DeleteIcon sx={{ fontSize: 16 }} />} 
+                   color="error" 
+                   onClick={() => handleDelete(item.id)}
+                >
+                  删除
+                </Button>
+              </CardActions>
+            </Card>
+          );
+        })
+      )}
+    </Stack>
+  );
+
+  return (
+    <Box>
+      {isMobile ? renderMobileView() : (
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell width={50} />
+              <TableCell>主机名</TableCell>
+              <TableCell>状态</TableCell>
+              <TableCell>SSL 状态</TableCell>
+              <TableCell>验证方法</TableCell>
+              <TableCell>创建时间</TableCell>
+              <TableCell align="right">操作</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {hostnames.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                   <Typography variant="body1" color="text.secondary">
+                    暂无自定义主机名
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              hostnames.map((item: any) => (
+                <>
+                  <TableRow 
+                    key={item.id} 
+                    hover 
+                    onClick={() => handleExpandClick(item.id)}
+                    sx={{ cursor: 'pointer', '& > *': { borderBottom: 'unset' } }}
+                  >
+                    <TableCell>
+                      <IconButton size="small">
+                        {expandedId === item.id ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                      </IconButton>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="500">
+                        {item.hostname}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item.status || 'unknown'}
+                        color={getStatusColor(item.status) as any}
+                        size="small"
+                        sx={{ fontWeight: 'bold', height: 24 }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={item.ssl?.status || '未知'}
+                        color={getSSLStatusColor(item.ssl?.status) as any}
+                        size="small"
+                        sx={{ fontWeight: 'bold', height: 24 }}
+                      />
+                    </TableCell>
+                    <TableCell>{item.ssl?.method?.toUpperCase() || '-'}</TableCell>
+                    <TableCell>{formatDateTime(item.created_at)}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="删除主机名">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(item.id);
+                          }}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                      <Collapse in={expandedId === item.id} timeout="auto" unmountOnExit>
+                        <Box sx={{ py: 2, px: 5 }}>
+                          {item.ssl?.validation_records ? (
+                            item.ssl.validation_records.map((record: any, index: number) => (
+                              <Box key={index} sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary">
+                                  证书验证 (TXT)
+                                </Typography>
+                                <Grid container spacing={4}>
+                                  <Grid item xs={12} md={5}>
+                                    <Typography variant="caption" color="text.secondary">TXT 名称</Typography>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                      <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {record.txt_name}
+                                      </Typography>
+                                      <Tooltip title="复制">
+                                        <IconButton size="small" onClick={() => handleCopy(record.txt_name)}>
+                                          <ContentCopyIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </Grid>
+                                  <Grid item xs={12} md={7}>
+                                    <Typography variant="caption" color="text.secondary">TXT 值</Typography>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                      <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {record.txt_value}
+                                      </Typography>
+                                      <Tooltip title="复制">
+                                        <IconButton size="small" onClick={() => handleCopy(record.txt_value)}>
+                                          <ContentCopyIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </Grid>
+                                </Grid>
+                              </Box>
+                            ))
+                          ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                              无需验证或已完成验证
+                            </Typography>
+                          )}
+                          
+                          {/* 所有的权验证 */}
+                          {item.ownership_verification && (
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="primary">
+                                所有权验证 ({item.ownership_verification.type.toUpperCase()})
+                              </Typography>
+                              <Grid container spacing={4}>
+                                  <Grid item xs={12} md={5}>
+                                    <Typography variant="caption" color="text.secondary">名称</Typography>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                      <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {item.ownership_verification.name}
+                                      </Typography>
+                                      <Tooltip title="复制">
+                                        <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.name)}>
+                                          <ContentCopyIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </Grid>
+                                  <Grid item xs={12} md={7}>
+                                    <Typography variant="caption" color="text.secondary">值</Typography>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                      <Typography variant="body2" fontFamily="monospace" sx={{ wordBreak: 'break-all' }}>
+                                        {item.ownership_verification.value}
+                                      </Typography>
+                                      <Tooltip title="复制">
+                                        <IconButton size="small" onClick={() => handleCopy(item.ownership_verification.value)}>
+                                          <ContentCopyIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </Grid>
+                                </Grid>
+                            </Box>
+                          )}
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      )}
 
       {/* 添加主机名对话框 */}
       <Dialog 

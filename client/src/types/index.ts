@@ -57,6 +57,8 @@ export interface DNSRecord {
   enabled?: boolean;
 }
 
+import { ProviderType } from './dns';
+
 /**
  * 域名
  */
@@ -68,6 +70,7 @@ export interface Domain {
   updatedAt?: string;
   credentialId?: number;
   credentialName?: string;
+  provider?: ProviderType;
 }
 
 /**

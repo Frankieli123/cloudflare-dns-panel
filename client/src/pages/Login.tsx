@@ -220,9 +220,9 @@ export default function Login() {
         
         {/* 底部版权信息 */}
         <Box sx={{ mt: 8, textAlign: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
-            &copy; {new Date().getFullYear()} CF Panel. All rights reserved.
-          </Typography>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 8, mb: 4, opacity: 0.7 }}>
+          &copy; {new Date().getFullYear()} DNS Panel. All rights reserved.
+        </Typography>
         </Box>
       </Box>
     </Box>

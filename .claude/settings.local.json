@@ -18,7 +18,8 @@
       "Bash(dir:*)",
       "Bash(ls -la \"e:\\APP\\CF\\app\\lib\\dns\"\" 2>/dev/null || echo \"Directory check \")",
       "Bash(find:*)",
-      "Bash(npx tsc --noEmit)"
+      "Bash(npx tsc --noEmit)",
+      "mcp__serena__write_memory"
     ]
   }
 }

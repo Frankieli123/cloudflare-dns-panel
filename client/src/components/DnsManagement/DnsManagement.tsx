@@ -13,6 +13,9 @@ import {
   Stack,
   Tabs,
   Tab,
+  useTheme,
+  useMediaQuery,
+  Grid,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -38,6 +41,9 @@ interface DnsManagementProps {
 export default function DnsManagement({ zoneId, credentialId }: DnsManagementProps) {
   const [activeTab, setActiveTab] = useState(0);
   const { selectedProvider, credentials, currentCapabilities } = useProvider();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const credentialProvider = typeof credentialId === 'number'
     ? credentials.find(c => c.id === credentialId)?.provider
     : selectedProvider;
@@ -127,20 +133,28 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
   const minTTL = minTtlData?.data?.minTTL;
 
   return (
-    <Box sx={{ py: 2, px: 6, bgcolor: 'background.default', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 0 }}>
-          <Tab label="DNS 记录" />
-          {supportsCustomHostnames && <Tab label="自定义主机名" />}
+    <Box sx={{ py: { xs: 1, sm: 2 }, px: { xs: 2, sm: 6 }, bgcolor: 'background.default', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }} 
+        spacing={{ xs: 2, sm: 0 }}
+        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+      >
+        <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 0, minHeight: { xs: 40, sm: 48 } }}>
+          <Tab label="DNS 记录" sx={{ minHeight: { xs: 40, sm: 48 }, py: 1 }} />
+          {supportsCustomHostnames && <Tab label="自定义主机名" sx={{ minHeight: { xs: 40, sm: 48 }, py: 1 }} />}
         </Tabs>
-        <Box sx={{ mb: 1, mr: 1 }}>
+        
+        <Box sx={{ mb: 1, mr: { xs: 0, sm: 1 }, flexShrink: 0 }}>
           {activeTab === 0 && (
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
               <Button
                 variant="contained"
                 size="small"
                 startIcon={<AddIcon />}
                 onClick={() => setShowQuickAdd(true)}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
               >
                 添加记录
               </Button>
@@ -150,26 +164,29 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
                 startIcon={<RefreshIcon />}
                 onClick={handleRefresh}
                 disabled={isLoading || isRecordsFetching}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
               >
                 刷新
               </Button>
             </Stack>
           )}
           {activeTab === 1 && supportsCustomHostnames && (
-            <Stack direction="row" spacing={2}>
+             <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<SettingsIcon />}
                 onClick={() => customHostnameListRef.current?.openFallbackDialog()}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
               >
-                管理回退源
+                回退源
               </Button>
               <Button
                 variant="contained"
                 size="small"
                 startIcon={<AddIcon />}
                 onClick={() => customHostnameListRef.current?.openAddDialog()}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
               >
                 添加主机名
               </Button>
@@ -209,8 +226,9 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
             onClose={() => setShowQuickAdd(false)} 
             maxWidth="md" 
             fullWidth
+            fullScreen={isMobile}
             PaperProps={{
-              sx: { borderRadius: 2 }
+              sx: { borderRadius: isMobile ? 0 : 2 }
             }}
           >
             <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>

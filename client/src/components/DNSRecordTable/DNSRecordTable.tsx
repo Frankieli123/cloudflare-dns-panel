@@ -15,6 +15,15 @@ import {
   MenuItem,
   Switch,
   ListSubheader,
+  useTheme,
+  useMediaQuery,
+  Stack,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Divider,
+  Button,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -24,12 +33,14 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   PowerSettingsNew as PowerIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { DNSRecord } from '@/types';
 import { DnsLine, ProviderCapabilities } from '@/types/dns';
 import { formatTTL } from '@/utils/formatters';
 import { TTL_OPTIONS } from '@/utils/constants';
 import { useProvider } from '@/contexts/ProviderContext';
+import { alpha } from '@mui/material/styles';
 
 interface DNSRecordTableProps {
   records: DNSRecord[];
@@ -56,6 +67,8 @@ export default function DNSRecordTable({
   stickyBodyBgColor,
 }: DNSRecordTableProps) {
   const { selectedProvider, currentCapabilities } = useProvider();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<DNSRecord>>({});
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -220,6 +233,256 @@ export default function DNSRecordTable({
     if (!name || name === '@') return false;
     return name !== zone;
   });
+
+  const renderMobileView = () => (
+    <Stack spacing={2}>
+      {visibleRecords.map((record) => {
+        const isEditing = editingId === record.id;
+
+        if (isEditing) {
+          const editingType =
+            typeof editForm.type === 'string' && recordTypes.includes(editForm.type)
+              ? editForm.type
+              : (recordTypes[0] ?? '');
+          const firstAllowedTtl = safeTtlOptions[0]?.value ?? TTL_OPTIONS[0].value;
+          const editingTtl =
+            typeof editForm.ttl === 'number' && safeTtlOptions.some(o => o.value === editForm.ttl)
+              ? editForm.ttl
+              : firstAllowedTtl;
+
+          return (
+            <Card key={record.id} variant="outlined" sx={{ borderRadius: 2 }}>
+              <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="subtitle2" color="primary.main" fontWeight="bold">编辑记录</Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={4}>
+                     <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="类型"
+                        value={editingType}
+                        onChange={(e) => handleChange('type', e.target.value)}
+                      >
+                        {recordTypes.map((type) => (
+                          <MenuItem key={type} value={type}>{type}</MenuItem>
+                        ))}
+                      </TextField>
+                  </Grid>
+                  <Grid item xs={8}>
+                     <TextField
+                        fullWidth
+                        size="small"
+                        label="名称"
+                        value={editForm.name ?? ''}
+                        onChange={(e) => handleChange('name', e.target.value)}
+                      />
+                  </Grid>
+                  <Grid item xs={12}>
+                     <TextField
+                        fullWidth
+                        size="small"
+                        label="内容"
+                        multiline
+                        maxRows={3}
+                        value={editForm.content ?? ''}
+                        onChange={(e) => handleChange('content', e.target.value)}
+                      />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="TTL"
+                        value={editingTtl}
+                        onChange={(e) => handleChange('ttl', Number(e.target.value))}
+                      >
+                        {safeTtlOptions.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                        ))}
+                      </TextField>
+                  </Grid>
+                  {showLine && (
+                     <Grid item xs={6}>
+                       <TextField
+                         select
+                         fullWidth
+                         size="small"
+                         label="线路"
+                         value={editForm.line || 'default'}
+                         onChange={(e) => handleChange('line', e.target.value)}
+                       >
+                         {hasLineCategories
+                           ? Object.keys(groupedLines)
+                               .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+                               .flatMap((group) => [
+                                 <ListSubheader key={`group-${group}`}>{group}</ListSubheader>,
+                                 ...groupedLines[group]
+                                   .slice()
+                                   .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'))
+                                   .map((line) => (
+                                     <MenuItem key={`${group}-${line.code}`} value={line.code}>
+                                       {line.name}
+                                     </MenuItem>
+                                   )),
+                               ])
+                           : lines.map((line) => (
+                               <MenuItem key={line.code} value={line.code}>
+                                 {line.name}
+                               </MenuItem>
+                             ))}
+                       </TextField>
+                     </Grid>
+                  )}
+                  {showProxied && (
+                     <Grid item xs={6} sx={{ display: 'flex', alignItems: 'center' }}>
+                       <Typography variant="body2" sx={{ mr: 1 }}>代理状态:</Typography>
+                       <Switch
+                          checked={!!editForm.proxied}
+                          onChange={(e) => handleChange('proxied', e.target.checked)}
+                          size="small"
+                        />
+                     </Grid>
+                  )}
+                  {(editingType === 'MX' || editingType === 'SRV') && (
+                     <Grid item xs={6}>
+                        <TextField
+                           type="number"
+                           fullWidth
+                           size="small"
+                           label="优先级"
+                           value={editForm.priority ?? ''}
+                           onChange={(e) => handleChange('priority', e.target.value === '' ? undefined : Number(e.target.value))}
+                         />
+                     </Grid>
+                  )}
+                   {showWeight && (
+                     <Grid item xs={6}>
+                       <TextField
+                         type="number"
+                         fullWidth
+                         size="small"
+                         label="权重"
+                         value={editForm.weight ?? ''}
+                         onChange={(e) => handleChange('weight', e.target.value ? Number(e.target.value) : undefined)}
+                       />
+                     </Grid>
+                   )}
+                   {showRemark && (
+                     <Grid item xs={12}>
+                       <TextField
+                         fullWidth
+                         size="small"
+                         label="备注"
+                         value={editForm.remark || ''}
+                         onChange={(e) => handleChange('remark', e.target.value)}
+                       />
+                     </Grid>
+                   )}
+                </Grid>
+              </CardContent>
+              <CardActions sx={{ justifyContent: 'flex-end', p: 2, pt: 0 }}>
+                <Button 
+                  size="small" 
+                  onClick={handleCancelClick} 
+                  color="inherit"
+                  startIcon={<CloseIcon />}
+                >
+                  取消
+                </Button>
+                <Button 
+                  size="small" 
+                  variant="contained" 
+                  onClick={() => handleSaveClick(record.id)} 
+                  startIcon={<SaveIcon />}
+                >
+                  保存
+                </Button>
+              </CardActions>
+            </Card>
+          );
+        }
+
+        return (
+          <Card key={record.id} variant="outlined" sx={{ borderRadius: 2, opacity: record.enabled === false ? 0.6 : 1 }}>
+            <CardContent sx={{ p: 1.5, pb: 0, '&:last-child': { pb: 0 } }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <Chip
+                  label={record.type}
+                  size="small"
+                  sx={{
+                    fontWeight: 'bold',
+                    height: 20,
+                    fontSize: '0.7rem',
+                    bgcolor: (theme) => theme.palette.primary.main,
+                    color: 'white',
+                    flexShrink: 0
+                  }}
+                />
+                <Typography variant="subtitle2" fontWeight="600" sx={{ wordBreak: 'break-all', lineHeight: 1.2, flexGrow: 1 }}>
+                  {record.name}
+                </Typography>
+                {showStatus && (
+                    <Switch
+                      checked={record.enabled !== false}
+                      onChange={() => handleStatusToggle(record)}
+                      size="small"
+                      sx={{ transform: 'scale(0.8)', mr: -1 }}
+                    />
+                )}
+              </Stack>
+              
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  mb: 1, 
+                  fontFamily: 'monospace', 
+                  wordBreak: 'break-all', 
+                  fontSize: '0.85rem',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}
+              >
+                {record.content}
+              </Typography>
+            </CardContent>
+            <Divider sx={{ borderStyle: 'dashed' }} />
+            <CardActions sx={{ justifyContent: 'flex-end', p: 0.5, px: 1 }}>
+               <Button 
+                  size="small" 
+                  startIcon={<EditIcon sx={{ fontSize: 16 }} />} 
+                  onClick={() => handleEditClick(record)}
+                  sx={{ color: 'text.secondary', fontSize: '0.75rem', minWidth: 'auto', px: 1 }}
+               >
+                 编辑
+               </Button>
+               <Button 
+                  size="small" 
+                  startIcon={<DeleteIcon sx={{ fontSize: 16 }} />} 
+                  color="error" 
+                  onClick={() => onDelete(record.id)}
+                  sx={{ fontSize: '0.75rem', minWidth: 'auto', px: 1 }}
+               >
+                 删除
+               </Button>
+            </CardActions>
+          </Card>
+        );
+      })}
+    </Stack>
+  );
+
+  if (isMobile) {
+    return (visibleRecords.length === 0 ? (
+       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4, color: 'text.secondary' }}>
+          <Typography variant="body2">暂无 DNS 记录</Typography>
+       </Box>
+    ) : renderMobileView());
+  }
 
   return (
     <TableContainer ref={containerRef} sx={{ width: '100%', overflowX: 'auto', maxWidth: '100%' }}>

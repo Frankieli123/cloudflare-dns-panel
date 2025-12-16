@@ -136,7 +136,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                                     </Avatar>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                       <Typography variant="h6" fontWeight="800" sx={{ lineHeight: 1.1, letterSpacing: 0.5, color: 'white', fontSize: '1.2rem' }}>
-                                        CF Panel
+                                        DNS Panel
                                       </Typography>
                                       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', mt: 0.5, fontSize: '0.8rem', fontWeight: 500 }}>
                                         DNS 管理系统
@@ -159,28 +159,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
                             onClick={() => {
                             
                       
-                         // 查找第一个有账户的提供商
-                            
-                      
-                         const firstActiveProvider = PROVIDER_ORDER.find(type => getCredentialCountByProvider(type) > 0);
-                            
-                      
-                         
-                            
-                      
-                         if (firstActiveProvider) {
-                            
-                      
-                           selectProvider(firstActiveProvider);
-                            
-                      
-                         } 
-                            
-                      
-                         
-                            
-                      
-                         navigate('/');
+                         selectProvider(null);
+                         navigate('/?scope=all');
                             
                       
                          if (onClose) onClose();
@@ -190,38 +170,17 @@ export default function Sidebar({ onClose }: SidebarProps) {
                             
                       
                       sx={{
-                            
-                      
                         py: 0.8,
-                            
-                      
                         px: 2,
-                            
-                      
-                        // 移除边框和固定背景，回归简洁
-                            
-                      
-                        color: 'rgba(255,255,255,0.7)',
-                            
-                      
+                        borderRadius: '12px',
+                        bgcolor: !selectedProvider ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        color: !selectedProvider ? 'white' : 'rgba(255,255,255,0.7)',
                         '&:hover': {
-                            
-                      
-                          bgcolor: 'transparent',
-                            
-                      
+                          bgcolor: !selectedProvider ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
                           color: 'white'
-                            
-                      
                         },
-                            
-                      
                         '&.Mui-focusVisible': { bgcolor: 'transparent' },
-                            
-                      
                         '&:active': { bgcolor: 'transparent' }
-                            
-                      
                       }}
                             
                       

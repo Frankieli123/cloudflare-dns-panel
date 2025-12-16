@@ -16,12 +16,16 @@ import {
   Stack,
   TextField,
   InputAdornment,
+  useTheme,
+  useMediaQuery,
+  IconButton,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Dns as DnsIcon,
   Language as LanguageIcon,
   Search as SearchIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { getDNSRecords, createDNSRecord, updateDNSRecord, deleteDNSRecord, getDNSLines, getDNSMinTTL, setDNSRecordStatus } from '@/services/dns';
 import { getDomainById } from '@/services/domains';
@@ -37,6 +41,8 @@ export default function DomainDetail() {
   const { zoneId } = useParams<{ zoneId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const { setLabel } = useBreadcrumb();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -166,15 +172,36 @@ export default function DomainDetail() {
 
   return (
     <Box>
+      {/* 移动端顶部标题栏 */}
+      {isMobile && (
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <IconButton 
+            edge="start" 
+            onClick={() => navigate(-1)}
+            aria-label="back"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" fontWeight="bold">
+            {domainName}
+          </Typography>
+        </Stack>
+      )}
+
       {/* 顶部操作栏 */}
       <Box sx={{ mb: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack 
+          direction={{ xs: 'column', sm: 'row' }} 
+          justifyContent="space-between" 
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          spacing={2}
+        >
           <TextField
             size="small"
             placeholder="搜索记录..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            sx={{ width: 240 }}
+            sx={{ width: { xs: '100%', sm: 240 } }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -183,7 +210,7 @@ export default function DomainDetail() {
               ),
             }}
           />
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={2} sx={{ justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
             {supportsCustomHostnames && (
               <Button
                 variant="outlined"
@@ -191,24 +218,28 @@ export default function DomainDetail() {
                 onClick={() => {
                   navigate(credentialId ? `/hostnames/${zoneId}?credentialId=${credentialId}` : `/hostnames/${zoneId}`);
                 }}
-                sx={{ px: 3 }}
+                sx={{ px: 3, flex: { xs: 1, sm: 'none' } }}
               >
-                自定义主机名
+                主机名
               </Button>
             )}
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setShowQuickAdd(true)}
-              sx={{ px: 3 }}
+              sx={{ px: 3, flex: { xs: 1, sm: 'none' } }}
             >
               添加记录
             </Button>
           </Stack>
         </Stack>
       </Box>
-      <Card sx={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-        <CardContent sx={{ p: 0 }}>
+      <Card sx={{ 
+        border: 'none', 
+        boxShadow: isMobile ? 'none' : '0 4px 20px rgba(0,0,0,0.05)',
+        bgcolor: isMobile ? 'transparent' : 'background.paper' 
+      }}>
+        <CardContent sx={{ p: isMobile ? 0 : 0 }}>
           <DNSRecordTable
             records={filteredRecords}
             lines={lines}
