@@ -47,6 +47,7 @@ export const RESOURCE_TYPES = {
   ZONE: '域名',
   HOSTNAME: '自定义主机名',
   USER: '用户',
+  CREDENTIAL: '供应商账户',
 };
 
 /**

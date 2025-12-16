@@ -36,7 +36,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { DNSRecord } from '@/types';
-import { DnsLine, ProviderCapabilities } from '@/types/dns';
+import { DnsLine, ProviderCapabilities, ProviderType } from '@/types/dns';
 import { formatTTL } from '@/utils/formatters';
 import { TTL_OPTIONS } from '@/utils/constants';
 import { useProvider } from '@/contexts/ProviderContext';
@@ -51,6 +51,8 @@ interface DNSRecordTableProps {
   minTTL?: number;
   /** 固定操作列的数据行背景色，默认 #F1F5F9 */
   stickyBodyBgColor?: string;
+  /** 显式指定供应商类型，用于覆盖全局上下文 */
+  providerType?: ProviderType;
 }
 
 /**
@@ -65,8 +67,9 @@ export default function DNSRecordTable({
   lines = [],
   minTTL,
   stickyBodyBgColor,
+  providerType,
 }: DNSRecordTableProps) {
-  const { selectedProvider, currentCapabilities } = useProvider();
+  const { selectedProvider, currentCapabilities, getProviderCapabilities } = useProvider();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -134,8 +137,14 @@ export default function DNSRecordTable({
     zIndex: 1,
   };
 
-  // 根据供应商能力决定显示哪些列
-  const caps: ProviderCapabilities = currentCapabilities || {
+  // 确定生效的供应商类型和能力
+  // 如果 props 传入了 providerType，优先使用 props，否则使用全局 context
+  const effectiveProviderType = providerType || selectedProvider;
+  const effectiveCapabilities = providerType 
+    ? getProviderCapabilities(providerType)
+    : currentCapabilities;
+
+  const caps: ProviderCapabilities = effectiveCapabilities || {
     supportsWeight: false,
     supportsLine: false,
     supportsStatus: false,
@@ -148,7 +157,7 @@ export default function DNSRecordTable({
     recordTypes: ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'CAA', 'NS'],
   };
 
-  const showProxied = selectedProvider === 'cloudflare';
+  const showProxied = effectiveProviderType === 'cloudflare';
   const showWeight = caps.supportsWeight;
   const showLine = caps.supportsLine;
   const showStatus = caps.supportsStatus && !!onStatusChange;
@@ -156,9 +165,9 @@ export default function DNSRecordTable({
   const recordTypes = caps.recordTypes;
 
   const ttlOptions = TTL_OPTIONS.filter((o) => {
-    if (selectedProvider !== 'cloudflare' && o.value === 1) return false;
+    if (effectiveProviderType !== 'cloudflare' && o.value === 1) return false;
     if (typeof minTTL === 'number' && Number.isFinite(minTTL) && minTTL > 0) {
-      if (selectedProvider === 'cloudflare' && o.value === 1) return true;
+      if (effectiveProviderType === 'cloudflare' && o.value === 1) return true;
       return o.value >= minTTL;
     }
     return true;
@@ -168,7 +177,7 @@ export default function DNSRecordTable({
     ? ttlOptions
     : (typeof minTTL === 'number' && Number.isFinite(minTTL) && minTTL > 0
         ? [{ label: `${minTTL} 秒`, value: minTTL }]
-        : TTL_OPTIONS.filter(o => (selectedProvider === 'cloudflare' ? true : o.value !== 1)));
+        : TTL_OPTIONS.filter(o => (effectiveProviderType === 'cloudflare' ? true : o.value !== 1)));
 
   const hasLineCategories = lines.some(l => !!l.parentCode);
   const groupedLines = lines.reduce<Record<string, DnsLine[]>>((acc, line) => {

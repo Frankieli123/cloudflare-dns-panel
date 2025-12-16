@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
-  Typography,
   Paper,
   Table,
   TableBody,
@@ -20,6 +19,31 @@ import {
 import { getLogs } from '@/services/logs';
 import { formatDateTime } from '@/utils/formatters';
 import { ACTION_TYPES, RESOURCE_TYPES, OPERATION_STATUS } from '@/utils/constants';
+
+const safeJsonParse = (value?: string) => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const getRecordName = (log: any) => {
+  if (log?.recordName) return log.recordName;
+
+  if (log?.resourceType === 'CREDENTIAL') {
+    const parsed = safeJsonParse(log?.newValue) ?? safeJsonParse(log?.oldValue);
+
+    const directName = parsed?.name;
+    if (typeof directName === 'string' && directName.trim()) return directName;
+
+    const nestedName = parsed?.credential?.name;
+    if (typeof nestedName === 'string' && nestedName.trim()) return nestedName;
+  }
+
+  return '-';
+};
 
 /**
  * 操作日志页面
@@ -159,10 +183,10 @@ export default function Logs() {
                     />
                   </TableCell>
                   <TableCell>
-                    {RESOURCE_TYPES[log.resourceType as keyof typeof RESOURCE_TYPES]}
+                    {RESOURCE_TYPES[log.resourceType as keyof typeof RESOURCE_TYPES] || log.resourceType || '-'}
                   </TableCell>
                   <TableCell>
-                    {log.recordName || '-'}
+                    {getRecordName(log)}
                     {log.recordType && ` (${log.recordType})`}
                   </TableCell>
                   <TableCell>

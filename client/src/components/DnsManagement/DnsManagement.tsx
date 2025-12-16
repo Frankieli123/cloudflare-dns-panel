@@ -15,7 +15,6 @@ import {
   Tab,
   useTheme,
   useMediaQuery,
-  Grid,
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -40,16 +39,17 @@ interface DnsManagementProps {
  */
 export default function DnsManagement({ zoneId, credentialId }: DnsManagementProps) {
   const [activeTab, setActiveTab] = useState(0);
-  const { selectedProvider, credentials, currentCapabilities } = useProvider();
+  const { selectedProvider, credentials, getProviderCapabilities } = useProvider();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const credentialProvider = typeof credentialId === 'number'
+  const credentialProvider = (typeof credentialId === 'number'
     ? credentials.find(c => c.id === credentialId)?.provider
-    : selectedProvider;
+    : selectedProvider) ?? undefined;
+  const capabilities = getProviderCapabilities(credentialProvider);
   const supportsCustomHostnames = credentialProvider === 'cloudflare';
-  const supportsLine = currentCapabilities?.supportsLine ?? false;
-  const supportsStatus = currentCapabilities?.supportsStatus ?? false;
+  const supportsLine = capabilities?.supportsLine ?? false;
+  const supportsStatus = capabilities?.supportsStatus ?? false;
   const customHostnameListRef = useRef<CustomHostnameListRef>(null);
 
   const queryClient = useQueryClient();
@@ -210,6 +210,7 @@ export default function DnsManagement({ zoneId, credentialId }: DnsManagementPro
               records={records}
               lines={lines}
               minTTL={minTTL}
+              providerType={credentialProvider}
               onUpdate={(recordId, params) => updateMutation.mutate({ recordId, params })}
               onDelete={(recordId) => {
                 if (window.confirm('确定要删除这条 DNS 记录吗？')) {

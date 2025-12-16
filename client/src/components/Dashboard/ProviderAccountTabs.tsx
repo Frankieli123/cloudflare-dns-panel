@@ -97,9 +97,7 @@ export default function ProviderAccountTabs({
 
         {accounts.map((account) => {
           const label = account.name;
-          const icon = mode === 'all'
-            ? getProviderIcon(account.provider, 'small')
-            : <AccountIcon fontSize="small" />;
+          const icon = getProviderIcon(account.provider, 'small');
 
           return (
             <Tab

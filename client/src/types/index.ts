@@ -80,7 +80,7 @@ export interface Log {
   id: number;
   timestamp: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
-  resourceType: 'DNS' | 'ZONE' | 'HOSTNAME' | 'USER';
+  resourceType: 'DNS' | 'ZONE' | 'HOSTNAME' | 'USER' | 'CREDENTIAL';
   domain?: string;
   recordName?: string;
   recordType?: string;

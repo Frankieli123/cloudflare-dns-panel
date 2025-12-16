@@ -245,6 +245,7 @@ export default function DomainDetail() {
             lines={lines}
             minTTL={minTTL}
             stickyBodyBgColor="#ffffff"
+            providerType={credentialProvider}
             onUpdate={(recordId, params) => updateMutation.mutate({ recordId, params })}
             onDelete={(recordId) => {
               if (window.confirm('确定要删除这条 DNS 记录吗？')) {
