@@ -27,7 +27,6 @@ interface RegisterForm {
   email?: string;
   password: string;
   confirmPassword: string;
-  cfApiToken: string;
 }
 
 /**
@@ -59,7 +58,6 @@ export default function Register() {
         username: data.username,
         email: data.email,
         password: data.password,
-        cfApiToken: data.cfApiToken,
       });
 
       alert('注册成功！请登录');
@@ -123,7 +121,7 @@ export default function Register() {
             开始您的体验
           </Typography>
           <Typography variant="h6" sx={{ opacity: 0.7, fontWeight: 'normal', mt: 2, lineHeight: 1.6 }}>
-            只需几步即可配置您的 DNS 管理控制台，集成 Cloudflare API，享受极速管理体验。
+            只需几步即可创建账户并进入 DNS 管理控制台，开始管理您的域名与解析记录。
           </Typography>
         </Box>
       </Box>
@@ -235,24 +233,6 @@ export default function Register() {
                     </InputAdornment>
                   ),
                 }}
-              />
-
-              <Box sx={{ my: 1 }}>
-                <Typography variant="subtitle2" color="primary" gutterBottom sx={{ mt: 1 }}>
-                  Cloudflare 配置
-                </Typography>
-                <Typography variant="caption" color="text.secondary" paragraph>
-                  我们需要您的 API Token 来管理您的 DNS 记录。这仅用于与 Cloudflare 通信。
-                </Typography>
-              </Box>
-
-              <TextField
-                fullWidth
-                label="Cloudflare API Token"
-                {...register('cfApiToken', { required: '请输入 Cloudflare API Token' })}
-                error={!!errors.cfApiToken}
-                helperText={errors.cfApiToken?.message}
-                placeholder="在 Profile > API Tokens 中获取"
               />
 
               <Button

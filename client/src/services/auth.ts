@@ -8,7 +8,6 @@ export const register = async (params: {
   username: string;
   email?: string;
   password: string;
-  cfApiToken: string;
 }): Promise<ApiResponse<{ user: User }>> => {
   return api.post('/auth/register', params);
 };

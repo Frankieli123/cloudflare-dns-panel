@@ -18,7 +18,7 @@ export class AuthService {
     username: string;
     email?: string;
     password: string;
-    cfApiToken: string;
+    cfApiToken?: string;
     cfAccountId?: string;
   }) {
     // 检查用户名是否已存在
@@ -47,7 +47,7 @@ export class AuthService {
 
     // 加密密码和 API Token
     const hashedPassword = await bcrypt.hash(params.password, SALT_ROUNDS);
-    const encryptedToken = encrypt(params.cfApiToken);
+    const encryptedToken = params.cfApiToken ? encrypt(params.cfApiToken) : undefined;
 
     // 创建用户
     const user = await prisma.user.create({
@@ -55,8 +55,8 @@ export class AuthService {
         username: params.username,
         ...(params.email ? { email: params.email } : {}),
         password: hashedPassword,
-        cfApiToken: encryptedToken,
-        cfAccountId: params.cfAccountId,
+        ...(encryptedToken ? { cfApiToken: encryptedToken } : {}),
+        ...(params.cfAccountId ? { cfAccountId: params.cfAccountId } : {}),
       } as any,
       select: {
         id: true,

@@ -24,6 +24,17 @@ import {
 } from '../base/types';
 import { BceCredentials, buildBceHeaders, generateClientToken } from './auth';
 
+function rfc3986Encode(input: string): string {
+  return encodeURIComponent(input).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function buildQueryString(query: Record<string, string>): string {
+  return Object.entries(query)
+    .sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])))
+    .map(([k, v]) => `${rfc3986Encode(k)}=${rfc3986Encode(v)}`)
+    .join('&');
+}
+
 interface BaiduZone {
   id?: string;
   name: string;
@@ -137,7 +148,7 @@ export class BaiduProvider extends BaseProvider {
 
     if (payload) headers['Content-Length'] = String(Buffer.byteLength(payload));
 
-    const qs = Object.entries(queryParams).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    const qs = buildQueryString(queryParams);
     const fullPath = qs ? `${path}?${qs}` : path;
 
     return await this.withRetry<T>(

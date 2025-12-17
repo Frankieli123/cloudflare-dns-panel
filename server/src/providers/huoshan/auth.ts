@@ -50,7 +50,8 @@ export function volcengineAmzDate(date = new Date()): string {
 function canonicalizeUri(path?: string): string {
   const raw = path && path.length > 0 ? path : '/';
   const ensured = raw.startsWith('/') ? raw : `/${raw}`;
-  return ensured.split('/').map(seg => rfc3986Encode(seg)).join('/');
+  const ensuredWithTrailingSlash = ensured.endsWith('/') ? ensured : `${ensured}/`;
+  return ensuredWithTrailingSlash.split('/').map(seg => rfc3986Encode(seg)).join('/');
 }
 
 function canonicalizeQuery(query?: QueryParams): string {
@@ -78,9 +79,7 @@ function normalizeHeaders(headers: Record<string, string | undefined>): Record<s
 }
 
 function pickSignedHeaderNames(allLowerHeaders: Record<string, string>): string[] {
-  const names = Object.keys(allLowerHeaders).filter(n =>
-    n === 'host' || n === 'x-date' || n === 'x-content-sha256' || n === 'content-type' || n.startsWith('x-')
-  );
+  const names = Object.keys(allLowerHeaders).filter(n => n !== 'authorization');
   names.sort();
   return names;
 }
@@ -98,7 +97,6 @@ export function buildVolcengineAuthorization(creds: VolcengineCredentials, input
     ...(input.headers || {}),
     Host: host,
     'X-Date': amzDate,
-    'X-Content-Sha256': hashedPayload,
   };
 
   const allLowerHeaders = normalizeHeaders(baseHeaders);
@@ -141,7 +139,13 @@ export function buildVolcengineHeaders(creds: VolcengineCredentials, input: Volc
 
   headers.Host = host;
   headers['X-Date'] = amzDate;
-  headers['X-Content-Sha256'] = hashedPayload;
+  if (
+    input.headers?.['X-Content-Sha256'] !== undefined ||
+    input.headers?.['x-content-sha256'] !== undefined ||
+    input.headers?.['X-Content-SHA256'] !== undefined
+  ) {
+    headers['X-Content-Sha256'] = hashedPayload;
+  }
   headers.Authorization = authorization;
   return headers;
 }

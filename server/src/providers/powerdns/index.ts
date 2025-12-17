@@ -36,7 +36,22 @@ interface PowerDnsRRSet {
   ttl: number;
   changetype?: string;
   records: PowerDnsRRSetRecord[];
-  comments?: { content: string }[];
+  comments?: PowerDnsComment[];
+}
+
+interface PowerDnsComment {
+  content: string;
+  account?: string;
+  modified_at?: number;
+}
+
+interface PowerDnsRRSetPatch {
+  name: string;
+  type: string;
+  changetype: 'DELETE' | 'REPLACE' | 'EXTEND' | 'PRUNE';
+  ttl?: number;
+  records?: PowerDnsRRSetRecord[];
+  comments?: PowerDnsComment[];
 }
 
 interface PowerDnsRRSetRecord {
@@ -287,6 +302,8 @@ export class PowerdnsProvider extends BaseProvider {
       );
 
       let content = params.value;
+      const isMx = params.type === 'MX';
+      const mxPriority = isMx ? (params.priority ?? 1) : undefined;
       // TXT 记录添加引号
       if (params.type === 'TXT' && !content.startsWith('"')) {
         content = `"${content}"`;
@@ -296,14 +313,18 @@ export class PowerdnsProvider extends BaseProvider {
         content = `${content}.`;
       }
       // MX 记录格式: priority content
-      if (params.type === 'MX' && params.priority !== undefined) {
-        content = `${params.priority} ${content}`;
+      if (isMx) {
+        content = `${mxPriority} ${content}`;
       }
 
       const current = await this.request<PowerDnsZone>('GET', `/api/v1/servers/${this.serverId}/zones/${zoneIdWithDot}`);
       const existing = (current.rrsets || []).find(r => r.name === rrsetName && r.type === params.type);
 
-      const rrset: PowerDnsRRSet = {
+      if (existing?.records?.some(r => r.content === content)) {
+        throw this.createError('ALREADY_EXISTS', '已存在相同记录');
+      }
+
+      const rrset: PowerDnsRRSetPatch = {
         name: rrsetName,
         type: params.type,
         ttl: params.ttl || existing?.ttl || 3600,
@@ -311,15 +332,24 @@ export class PowerdnsProvider extends BaseProvider {
         records: [...(existing?.records || []), { content, disabled: false }],
       };
       if (params.remark) {
-        rrset.comments = [{ content: params.remark }];
+        rrset.comments = [{ content: params.remark, account: '' }];
       }
 
       await this.request('PATCH', `/api/v1/servers/${this.serverId}/zones/${zoneIdWithDot}`, { rrsets: [rrset] });
 
       // 返回新创建的记录
       const result = await this.getRecords(zoneId);
+
+      let expectedValue = params.value;
+      if ((params.type === 'CNAME' || params.type === 'MX' || params.type === 'NS') && !expectedValue.endsWith('.')) {
+        expectedValue = `${expectedValue}.`;
+      }
       const created = result.records.find(
-        r => r.name === (params.name === '@' ? '@' : params.name) && r.type === params.type && r.value === params.value
+        r =>
+          r.name === (params.name === '@' ? '@' : params.name) &&
+          r.type === params.type &&
+          r.value === expectedValue &&
+          (!isMx || r.priority === mxPriority)
       );
       if (!created) throw this.createError('CREATE_FAILED', '创建记录失败');
       return created;
@@ -352,21 +382,29 @@ export class PowerdnsProvider extends BaseProvider {
       }
 
       let content = params.value;
+      const isMx = params.type === 'MX';
+      let mxPriority: number | undefined = params.priority;
+      if (isMx && mxPriority === undefined) {
+        const cur = rrset.records[decoded.recordIndex]?.content;
+        const first = String(cur || '').trim().split(/\s+/)[0];
+        const p = Number(first);
+        mxPriority = Number.isFinite(p) ? p : 1;
+      }
       if (params.type === 'TXT' && !content.startsWith('"')) {
         content = `"${content}"`;
       }
       if ((params.type === 'CNAME' || params.type === 'MX' || params.type === 'NS') && !content.endsWith('.')) {
         content = `${content}.`;
       }
-      if (params.type === 'MX' && params.priority !== undefined) {
-        content = `${params.priority} ${content}`;
+      if (isMx) {
+        content = `${mxPriority} ${content}`;
       }
 
       const newRecords = rrset.records.map((r, idx) =>
         idx === decoded.recordIndex ? { ...r, content } : r
       );
 
-      const patch: PowerDnsRRSet = {
+      const patch: PowerDnsRRSetPatch = {
         name: rrset.name,
         type: rrset.type,
         ttl: params.ttl || rrset.ttl || 3600,
@@ -374,7 +412,7 @@ export class PowerdnsProvider extends BaseProvider {
         records: newRecords,
       };
       if (params.remark !== undefined) {
-        patch.comments = params.remark ? [{ content: params.remark }] : [];
+        patch.comments = params.remark ? [{ content: params.remark, account: '' }] : [];
       } else if (rrset.comments) {
         patch.comments = rrset.comments;
       }
@@ -398,10 +436,11 @@ export class PowerdnsProvider extends BaseProvider {
       }
 
       const remaining = rrset.records.filter((_, idx) => idx !== decoded.recordIndex);
-      const rrsets: PowerDnsRRSet[] = [];
+      const rrsets: PowerDnsRRSetPatch[] = [];
 
       if (remaining.length === 0) {
-        rrsets.push({ name: rrset.name, type: rrset.type, ttl: rrset.ttl, changetype: 'DELETE', records: [] });
+        // PowerDNS API: changetype=DELETE 时不能包含 ttl
+        rrsets.push({ name: rrset.name, type: rrset.type, changetype: 'DELETE' });
       } else {
         rrsets.push({
           name: rrset.name,
@@ -435,7 +474,7 @@ export class PowerdnsProvider extends BaseProvider {
         idx === decoded.recordIndex ? { ...r, disabled: !enabled } : r
       );
 
-      const patch: PowerDnsRRSet = {
+      const patch: PowerDnsRRSetPatch = {
         name: rrset.name,
         type: rrset.type,
         ttl: rrset.ttl,

@@ -28,10 +28,6 @@ function rfc3986Encode(input: string): string {
   return encodeURIComponent(input).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-function hmacSha256(key: string | Buffer, data: string | Buffer): Buffer {
-  return crypto.createHmac('sha256', key).update(data).digest();
-}
-
 function hmacSha256Hex(key: string | Buffer, data: string | Buffer): string {
   return crypto.createHmac('sha256', key).update(data).digest('hex');
 }
@@ -72,7 +68,7 @@ function canonicalizeQuery(query?: QueryParams): string {
 }
 
 function defaultHeadersToSign(allLowerHeaders: Record<string, string>): string[] {
-  const names = Object.keys(allLowerHeaders).filter(n => n === 'host' || n.startsWith('x-bce-'));
+  const names = Object.keys(allLowerHeaders).filter(n => n !== 'authorization');
   names.sort();
   return names;
 }
@@ -94,7 +90,9 @@ export function buildBceAuthorization(creds: BceCredentials, input: BceSignInput
   const signedHeaders = signedHeaderNames.join(';');
 
   // BCE requires URL-encoded values in canonical headers
-  const canonicalHeaders = signedHeaderNames.map(n => `${n}:${rfc3986Encode(allLowerHeaders[n] ?? '')}\n`).join('');
+  const canonicalHeaders = signedHeaderNames
+    .map(n => `${rfc3986Encode(n)}:${rfc3986Encode(allLowerHeaders[n] ?? '')}`)
+    .join('\n');
 
   const canonicalRequest =
     `${method}\n` +
@@ -103,7 +101,7 @@ export function buildBceAuthorization(creds: BceCredentials, input: BceSignInput
     `${canonicalHeaders}`;
 
   const authStringPrefix = `bce-auth-v1/${creds.accessKey}/${bceDate}/${expiration}`;
-  const signingKey = hmacSha256(creds.secretKey, authStringPrefix);
+  const signingKey = hmacSha256Hex(creds.secretKey, authStringPrefix);
   const signature = hmacSha256Hex(signingKey, canonicalRequest);
 
   const authorization = `${authStringPrefix}/${signedHeaders}/${signature}`;

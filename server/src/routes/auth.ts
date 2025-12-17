@@ -17,7 +17,7 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password, cfApiToken, cfAccountId } = req.body;
 
-    if (!username || !password || !cfApiToken) {
+    if (!username || !password) {
       return errorResponse(res, '缺少必需参数', 400);
     }
 

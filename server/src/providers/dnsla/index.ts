@@ -104,7 +104,7 @@ function fromDnslaLineId(lineId?: string): string {
 
 function toDnslaLineId(line?: string): string {
   const v = String(line ?? '').trim();
-  if (!v || v === 'default') return '';
+  if (!v || v === 'default') return '0';
   return v;
 }
 
@@ -327,7 +327,7 @@ export class DnslaProvider extends BaseProvider {
         ttl: params.ttl || 600,
       };
       if (mapped.dominant !== undefined) body.dominant = mapped.dominant;
-      if (params.line !== undefined) body.lineId = toDnslaLineId(params.line);
+      body.lineId = toDnslaLineId(params.line);
       if (params.weight !== undefined) body.weight = params.weight;
       if (params.priority !== undefined) body.preference = params.priority;
 
@@ -354,7 +354,7 @@ export class DnslaProvider extends BaseProvider {
         ttl: params.ttl || 600,
       };
       if (mapped.dominant !== undefined) body.dominant = mapped.dominant;
-      if (params.line !== undefined) body.lineId = toDnslaLineId(params.line);
+      body.lineId = toDnslaLineId(params.line);
       if (params.weight !== undefined) body.weight = params.weight;
       if (params.priority !== undefined) body.preference = params.priority;
 

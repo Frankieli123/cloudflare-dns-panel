@@ -119,11 +119,12 @@ export class NamesiloProvider extends BaseProvider {
                 try {
                   const json = raw ? JSON.parse(raw) : {};
                   // code=300 表示成功
-                  if (json?.reply?.code && json.reply.code !== 300) {
+                  const codeRaw = (json as any)?.reply?.code;
+                  if (codeRaw !== undefined && codeRaw !== null && Number(codeRaw) !== 300) {
                     reject(
                       this.createError(
-                        String(json.reply.code),
-                        json.reply.detail || `NameSilo 错误: ${json.reply.code}`,
+                        String(codeRaw),
+                        (json as any)?.reply?.detail || `NameSilo 错误: ${codeRaw}`,
                         { meta: { raw: json } }
                       )
                     );
@@ -144,7 +145,7 @@ export class NamesiloProvider extends BaseProvider {
 
   async checkAuth(): Promise<boolean> {
     try {
-      await this.request('listDomains');
+      await this.request('listDomains', { page: 1, pageSize: 1 });
       return true;
     } catch {
       return false;
@@ -153,9 +154,23 @@ export class NamesiloProvider extends BaseProvider {
 
   async getZones(page?: number, pageSize?: number, keyword?: string): Promise<ZoneListResult> {
     try {
-      const resp = await this.request<NamesiloResponse>('listDomains');
-      const domainList = resp.reply?.domains?.domain || [];
-      const domains = Array.isArray(domainList) ? domainList : [domainList];
+      const fetchPageSize = 100;
+      const domains: string[] = [];
+      let fetchPage = 1;
+
+      while (true) {
+        const resp = await this.request<NamesiloResponse>('listDomains', { page: fetchPage, pageSize: fetchPageSize });
+        const domainList = resp.reply?.domains?.domain || [];
+        const batch = Array.isArray(domainList) ? domainList : [domainList];
+
+        const cleaned = batch.map(d => String(d)).filter(Boolean);
+        if (cleaned.length === 0) break;
+        domains.push(...cleaned);
+
+        if (cleaned.length < fetchPageSize) break;
+        fetchPage += 1;
+        if (fetchPage > 2000) break;
+      }
 
       const zones: Zone[] = domains.map(d =>
         this.normalizeZone({
