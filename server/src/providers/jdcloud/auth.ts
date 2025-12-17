@@ -47,6 +47,12 @@ export function jdcloudAmzDate(date = new Date()): string {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[-:]/g, '');
 }
 
+function jdcloudNonce(): string {
+  // JDCloud gateway requires x-jdcloud-nonce header.
+  // Keep it simple: use random bytes as hex to avoid case/encoding issues.
+  return crypto.randomBytes(16).toString('hex');
+}
+
 function canonicalizeUri(path?: string): string {
   const raw = path && path.length > 0 ? path : '/';
   const ensured = raw.startsWith('/') ? raw : `/${raw}`;
@@ -130,10 +136,26 @@ export function buildJdcloudAuthorization(creds: JdcloudCredentials, input: Jdcl
 
 export function buildJdcloudHeaders(creds: JdcloudCredentials, input: JdcloudSignInput): Record<string, string> {
   const host = input.host.toLowerCase();
-  const { authorization, amzDate } = buildJdcloudAuthorization(creds, { ...input, host });
+
+  const nonce =
+    input.headers?.['x-jdcloud-nonce'] ??
+    input.headers?.['X-Jdcloud-Nonce'] ??
+    input.headers?.['X-JDCLOUD-Nonce'] ??
+    jdcloudNonce();
+
+  const mergedInput: JdcloudSignInput = {
+    ...input,
+    host,
+    headers: {
+      ...(input.headers || {}),
+      'x-jdcloud-nonce': nonce,
+    },
+  };
+
+  const { authorization, amzDate } = buildJdcloudAuthorization(creds, mergedInput);
 
   const headers: Record<string, string> = {};
-  for (const [k, v] of Object.entries(input.headers || {})) {
+  for (const [k, v] of Object.entries(mergedInput.headers || {})) {
     if (v === undefined || v === null) continue;
     headers[k] = String(v);
   }

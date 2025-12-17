@@ -25,6 +25,10 @@ import {
 } from '../base/types';
 import { buildJdcloudHeaders, JdcloudCredentials } from './auth';
 
+function rfc3986Encode(input: string): string {
+  return encodeURIComponent(input).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 interface JdcloudDomain {
   id: number;
   domainName: string;
@@ -171,7 +175,10 @@ export class JdcloudProvider extends BaseProvider {
 
     if (payload) headers['Content-Length'] = String(Buffer.byteLength(payload));
 
-    const qs = Object.entries(queryParams).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    const qs = Object.entries(queryParams)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => `${rfc3986Encode(k)}=${rfc3986Encode(v)}`)
+      .join('&');
     const fullPath = qs ? `${path}?${qs}` : path;
 
     return await this.withRetry<T>(

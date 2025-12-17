@@ -43,7 +43,8 @@ export function huaweiSdkDate(date = new Date()): string {
 function canonicalizeUri(path?: string): string {
   const raw = path && path.length > 0 ? path : '/';
   const ensured = raw.startsWith('/') ? raw : `/${raw}`;
-  return ensured.split('/').map(seg => rfc3986Encode(seg)).join('/');
+  const ensuredWithTrailingSlash = ensured.endsWith('/') ? ensured : `${ensured}/`;
+  return ensuredWithTrailingSlash.split('/').map(seg => rfc3986Encode(seg)).join('/');
 }
 
 function canonicalizeQuery(query?: QueryParams): string {

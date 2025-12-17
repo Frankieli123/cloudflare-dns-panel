@@ -61,6 +61,10 @@ const HUAWEI_LINES_FILE = path.join(__dirname, 'data', 'huawei_line.json');
 // 线路数据缓存
 let huaweiLinesCache: DnsLine[] | null = null;
 
+function rfc3986Encode(input: string): string {
+  return encodeURIComponent(input).replace(/[!'()*]/g, ch => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 /**
  * 从JSON文件加载华为云线路数据
  */
@@ -174,7 +178,10 @@ export class HuaweiProvider extends BaseProvider {
 
     if (payload) headers['Content-Length'] = String(Buffer.byteLength(payload));
 
-    const qs = Object.entries(queryParams).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    const qs = Object.entries(queryParams)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => `${rfc3986Encode(k)}=${rfc3986Encode(v)}`)
+      .join('&');
     const fullPath = qs ? `${path}?${qs}` : path;
 
     return await this.withRetry<T>(
